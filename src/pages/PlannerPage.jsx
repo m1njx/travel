@@ -199,108 +199,243 @@ export default function PlannerPage({
 
   return (
     <div className="pb-6">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="px-4 sm:px-5 pt-2 pb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-[24px] sm:text-[26px] md:text-[28px] font-bold text-toss-text-primary tracking-tight">여행 일정</h1>
-          <p className="text-[13px] sm:text-[14px] text-toss-text-secondary mt-1">일자별 일정을 한눈에 관리해보세요 🗓️</p>
-        </div>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAdd(true)}
-          className="hidden md:flex items-center gap-1.5 px-4 py-2.5 bg-toss-blue text-white rounded-xl text-[14px] font-semibold shadow-sm hover:bg-toss-blue-dark">
-          <Plus className="w-4 h-4" /> 일정 추가
-        </motion.button>
-      </motion.div>
-
-      {/* Progress Bar */}
-      {totalP > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mx-4 sm:mx-5 mb-6 toss-card">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[14px] font-semibold text-toss-text-primary">전체 방문 진행률</span>
-            <span className="text-[14px] font-bold text-toss-blue">{rate}%</span>
+      {/* ==================== DESKTOP UI ==================== */}
+      <div className="hidden md:block">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="px-4 sm:px-5 pt-2 pb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-[24px] sm:text-[26px] md:text-[28px] font-bold text-toss-text-primary tracking-tight">여행 일정</h1>
+            <p className="text-[13px] sm:text-[14px] text-toss-text-secondary mt-1">일자별 일정을 한눈에 관리해보세요 🗓️</p>
           </div>
-          <div className="w-full h-2.5 bg-toss-bg rounded-full overflow-hidden">
-            <motion.div initial={{ width: 0 }} animate={{ width: `${rate}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full bg-toss-blue rounded-full" />
-          </div>
-          <p className="text-[12px] text-toss-text-secondary mt-2">{doneP}/{totalP}개 방문 완료</p>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-toss-blue text-white rounded-xl text-[14px] font-semibold shadow-sm hover:bg-toss-blue-dark">
+            <Plus className="w-4 h-4" /> 일정 추가
+          </motion.button>
         </motion.div>
-      )}
 
-      {/* Accordion Group by Date */}
-      <div className="px-4 sm:px-5 space-y-4">
-        {sortedDates.map((dateStr) => {
-          const dayLabel = getDayNumber(dateStr);
-          const isExpanded = expandedDates.includes(dateStr);
-          const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
-
-          return (
-            <div key={dateStr} id={`date-section-${dateStr}`} className="bg-white rounded-2xl border border-toss-border overflow-hidden shadow-sm scroll-mt-6">
-              {/* Date Header Accordion Trigger */}
-              <button
-                onClick={() => toggleDateExpand(dateStr)}
-                className="w-full flex items-center justify-between p-4 sm:p-5 bg-white text-left hover:bg-toss-bg/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  {dayLabel && (
-                    <span className="text-[11px] sm:text-[12px] font-bold bg-toss-blue text-white px-2 py-0.8 rounded-lg">
-                      {dayLabel}
-                    </span>
-                  )}
-                  <div>
-                    <h3 className="text-[16px] sm:text-[17px] font-bold text-toss-text-primary">
-                      {formatDateLabel(dateStr)}
-                    </h3>
-                    <p className="text-[12px] text-toss-text-secondary mt-0.5">
-                      일정 {daySchedules.length}개
-                    </p>
-                  </div>
-                </div>
-                <div className="p-1 rounded-full bg-toss-bg">
-                  {isExpanded ? <ChevronUp className="w-4 h-4 text-toss-text-secondary" /> : <ChevronDown className="w-4 h-4 text-toss-text-secondary" />}
-                </div>
-              </button>
-
-              {/* Schedules in Date */}
-              <AnimatePresence initial={false}>
-                {isExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="p-4 sm:p-5 border-t border-toss-border/60 bg-toss-bg/20 space-y-4">
-                      {daySchedules.map((schedule, idx) => (
-                        <ScheduleCard
-                          key={schedule.id}
-                          schedule={schedule}
-                          index={idx}
-                          apiKey={apiKey}
-                          onEdit={() => setEditing(schedule)}
-                          onDelete={() => handleDelete(schedule.id)}
-                          onAddPlace={(p) => addPlace(schedule.id, p)}
-                          onTogglePlace={(pid) => togglePlace(schedule.id, pid)}
-                          onDeletePlace={(pid) => deletePlace(schedule.id, pid)}
-                          onUpdatePlace={(pid, fields) => updatePlace(schedule.id, pid, fields)}
-                          onUpdatePlacesList={(newPlaces) => updatePlacesList(schedule.id, newPlaces)}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        {/* Progress Bar */}
+        {totalP > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mx-4 sm:mx-5 mb-6 toss-card">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[14px] font-semibold text-toss-text-primary">전체 방문 진행률</span>
+              <span className="text-[14px] font-bold text-toss-blue">{rate}%</span>
             </div>
-          );
-        })}
-
-        {sortedDates.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-toss-border/60">
-            <div className="w-16 h-16 bg-toss-blue-light rounded-full flex items-center justify-center mb-4">
-              <Calendar className="w-8 h-8 text-toss-blue" />
+            <div className="w-full h-2.5 bg-toss-bg rounded-full overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${rate}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full bg-toss-blue rounded-full" />
             </div>
-            <p className="text-[16px] font-semibold text-toss-text-primary mb-1">일정이 없어요</p>
-            <p className="text-[14px] text-toss-text-secondary">새 일정을 추가해서 여행 계획을 세워보세요</p>
+            <p className="text-[12px] text-toss-text-secondary mt-2">{doneP}/{totalP}개 방문 완료</p>
           </motion.div>
         )}
+
+        {/* Accordion Group by Date */}
+        <div className="px-4 sm:px-5 space-y-4">
+          {sortedDates.map((dateStr) => {
+            const dayLabel = getDayNumber(dateStr);
+            const isExpanded = expandedDates.includes(dateStr);
+            const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
+
+            return (
+              <div key={dateStr} id={`date-section-${dateStr}`} className="bg-white rounded-2xl border border-toss-border overflow-hidden shadow-sm scroll-mt-6">
+                {/* Date Header Accordion Trigger */}
+                <button
+                  onClick={() => toggleDateExpand(dateStr)}
+                  className="w-full flex items-center justify-between p-4 sm:p-5 bg-white text-left hover:bg-toss-bg/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {dayLabel && (
+                      <span className="text-[11px] sm:text-[12px] font-bold bg-toss-blue text-white px-2 py-0.8 rounded-lg">
+                        {dayLabel}
+                      </span>
+                    )}
+                    <div>
+                      <h3 className="text-[16px] sm:text-[17px] font-bold text-toss-text-primary">
+                        {formatDateLabel(dateStr)}
+                      </h3>
+                      <p className="text-[12px] text-toss-text-secondary mt-0.5">
+                        일정 {daySchedules.length}개
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-1 rounded-full bg-toss-bg">
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-toss-text-secondary" /> : <ChevronDown className="w-4 h-4 text-toss-text-secondary" />}
+                  </div>
+                </button>
+
+                {/* Schedules in Date */}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="p-4 sm:p-5 border-t border-toss-border/60 bg-toss-bg/20 space-y-4">
+                        {daySchedules.map((schedule, idx) => (
+                          <ScheduleCard
+                            key={schedule.id}
+                            schedule={schedule}
+                            index={idx}
+                            apiKey={apiKey}
+                            onEdit={() => setEditing(schedule)}
+                            onDelete={() => handleDelete(schedule.id)}
+                            onAddPlace={(p) => addPlace(schedule.id, p)}
+                            onTogglePlace={(pid) => togglePlace(schedule.id, pid)}
+                            onDeletePlace={(pid) => deletePlace(schedule.id, pid)}
+                            onUpdatePlace={(pid, fields) => updatePlace(schedule.id, pid, fields)}
+                            onUpdatePlacesList={(newPlaces) => updatePlacesList(schedule.id, newPlaces)}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+
+          {sortedDates.length === 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-toss-border/60">
+              <div className="w-16 h-16 bg-toss-blue-light rounded-full flex items-center justify-center mb-4">
+                <Calendar className="w-8 h-8 text-toss-blue" />
+              </div>
+              <p className="text-[16px] font-semibold text-toss-text-primary mb-1">일정이 없어요</p>
+              <p className="text-[14px] text-toss-text-secondary">새 일정을 추가해서 여행 계획을 세워보세요</p>
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* ==================== MOBILE UI ==================== */}
+      <div className="block md:hidden -mx-4 -mt-6 pb-12 flex flex-col bg-slate-50 min-h-screen text-toss-text-primary">
+        {/* Mobile Header Banner */}
+        <div className="bg-gradient-to-b from-toss-blue via-toss-blue to-indigo-650 text-white pt-6 pb-8 px-5 rounded-b-[36px] shadow-lg shadow-toss-blue/15 relative overflow-hidden flex flex-col gap-4">
+          <div className="absolute right-[-20px] bottom-[-20px] opacity-10 pointer-events-none">
+            <Compass className="w-40 h-40 rotate-12" />
+          </div>
+
+          <div className="relative z-10 flex flex-col gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
+              {activeMemberTeams.map(team => (
+                <span key={team.id} className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
+                  ✈️ {team.name}
+                </span>
+              ))}
+            </div>
+            <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight mt-1.5">
+              {nickname}님의 여행 일정 🗓️
+            </h2>
+            <p className="text-[12.5px] font-semibold text-white/80">
+              TripSync와 함께 일정을 스마트하게 관리해 보세요!
+            </p>
+          </div>
+
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-3 gap-2 mt-2.5 relative z-10">
+            <div className="bg-white/10 hover:bg-white/15 border border-white/10 backdrop-blur-md rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1">
+              <span className="text-[9.5px] font-bold opacity-80 leading-none">등록 일정</span>
+              <span className="text-[14px] font-extrabold tracking-tight pt-1 leading-none">{schedules.length}개</span>
+            </div>
+            <div className="bg-white/10 hover:bg-white/15 border border-white/10 backdrop-blur-md rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1">
+              <span className="text-[9.5px] font-bold opacity-80 leading-none">총 방문지</span>
+              <span className="text-[14px] font-extrabold tracking-tight pt-1 leading-none">{totalP}곳</span>
+            </div>
+            <div className="bg-white/10 hover:bg-white/15 border border-white/10 backdrop-blur-md rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1">
+              <span className="text-[9.5px] font-bold opacity-80 leading-none">방문 진행률</span>
+              <span className="text-[14px] font-extrabold tracking-tight pt-1 leading-none">{rate}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Visit Progress Bar */}
+        {totalP > 0 && (
+          <div className="mx-5 mt-5 bg-white border border-toss-border/55 rounded-2xl p-4.5 shadow-sm">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[13px] font-bold text-toss-text-secondary">전체 방문 진행 상황</span>
+              <span className="text-[13px] font-extrabold text-toss-blue">{doneP}/{totalP}개 완료</span>
+            </div>
+            <div className="w-full h-2.5 bg-toss-bg rounded-full overflow-hidden">
+              <div className="h-full bg-toss-blue rounded-full transition-all duration-700" style={{ width: `${rate}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* Accordion Group by Date for Mobile */}
+        <div className="px-5 mt-5 space-y-4">
+          {sortedDates.map((dateStr) => {
+            const dayLabel = getDayNumber(dateStr);
+            const isExpanded = expandedDates.includes(dateStr);
+            const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
+
+            return (
+              <div key={dateStr} id={`date-section-${dateStr}`} className="bg-white rounded-2xl border border-toss-border/55 overflow-hidden shadow-sm">
+                <button
+                  onClick={() => toggleDateExpand(dateStr)}
+                  className="w-full flex items-center justify-between p-4 bg-white text-left active:bg-toss-bg/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {dayLabel && (
+                      <span className="text-[10.5px] font-extrabold bg-toss-blue text-white px-2 py-0.5 rounded-lg">
+                        {dayLabel}
+                      </span>
+                    )}
+                    <div>
+                      <h3 className="text-[15px] font-extrabold text-toss-text-primary">
+                        {formatDateLabel(dateStr)}
+                      </h3>
+                      <p className="text-[11.5px] text-toss-text-secondary mt-0.5 font-semibold">
+                        일정 {daySchedules.length}개
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-1 rounded-full bg-toss-bg">
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-toss-text-secondary" /> : <ChevronDown className="w-4 h-4 text-toss-text-secondary" />}
+                  </div>
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="p-4 border-t border-toss-border/40 bg-toss-bg/10 space-y-4">
+                        {daySchedules.map((schedule, idx) => (
+                          <ScheduleCard
+                            key={schedule.id}
+                            schedule={schedule}
+                            index={idx}
+                            apiKey={apiKey}
+                            onEdit={() => setEditing(schedule)}
+                            onDelete={() => handleDelete(schedule.id)}
+                            onAddPlace={(p) => addPlace(schedule.id, p)}
+                            onTogglePlace={(pid) => togglePlace(schedule.id, pid)}
+                            onDeletePlace={(pid) => deletePlace(schedule.id, pid)}
+                            onUpdatePlace={(pid, fields) => updatePlace(schedule.id, pid, fields)}
+                            onUpdatePlacesList={(newPlaces) => updatePlacesList(schedule.id, newPlaces)}
+                            isMobile={true}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+
+          {sortedDates.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-toss-border/50 text-center">
+              <div className="w-14 h-14 bg-toss-blue-light rounded-full flex items-center justify-center mb-3">
+                <Calendar className="w-7 h-7 text-toss-blue" />
+              </div>
+              <p className="text-[15px] font-bold text-toss-text-primary mb-0.5">등록된 일정이 없습니다</p>
+              <p className="text-[12.5px] text-toss-text-secondary">새 일정을 추가하여 여행 계획을 세워보세요</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Floating Add Button for Mobile */}
@@ -516,7 +651,7 @@ function TimeInputGroup({ label, value, onChange, onClear, dropdownId, activeDro
   );
 }
 
-function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onTogglePlace, onDeletePlace, onUpdatePlace, apiKey, onUpdatePlacesList }) {
+function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onTogglePlace, onDeletePlace, onUpdatePlace, apiKey, onUpdatePlacesList, isMobile }) {
   const [showAdd, setShowAdd] = useState(false);
   const [pName, setPName] = useState('');
   const [pMemo, setPMemo] = useState('');
@@ -699,6 +834,448 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
     if (!b.time) return -1;
     return a.time.localeCompare(b.time);
   });
+
+  if (isMobile) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        className={`bg-white rounded-2xl p-4 border border-toss-border/55 shadow-sm transition-all duration-200 ${allDone ? 'border-l-4 border-toss-success bg-green-50/5 font-semibold' : ''}`}
+      >
+        {/* Mobile Schedule Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0 active:opacity-75" onClick={() => setIsExpanded(!isExpanded)}>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {allDone && (
+                <span className="text-[10px] font-extrabold text-toss-success bg-green-50 px-2 py-0.5 rounded-full">
+                  전부 완료 ✓
+                </span>
+              )}
+            </div>
+            <h4 className="text-[15px] font-extrabold text-toss-text-primary tracking-tight leading-snug break-words">{schedule.title}</h4>
+
+            {schedule.url && (
+              <button
+                onClick={(e) => handleLinkClick(e, schedule.url)}
+                className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 bg-toss-blue/5 text-toss-blue text-[11px] font-bold rounded-lg active:bg-toss-blue/10 transition-colors"
+              >
+                <Link2 className="w-3 h-3" />
+                참고 링크
+                <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+              </button>
+            )}
+
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {total > 0 && (
+                <p className="text-[11.5px] font-semibold text-toss-text-secondary">📍 코스 {done}/{total}개</p>
+              )}
+              {schedule.createdBy && (
+                <p className="text-[11px] font-bold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
+                  👤 {schedule.createdBy}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 ml-2">
+            <button onClick={onEdit} className="w-8 h-8 rounded-full hover:bg-toss-bg active:bg-toss-bg flex items-center justify-center text-toss-text-secondary">
+              <Edit3 className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={onDelete} className="w-8 h-8 rounded-full hover:bg-red-50 active:bg-red-50 flex items-center justify-center text-toss-danger">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setIsExpanded(!isExpanded)} className="w-8 h-8 rounded-full hover:bg-toss-bg active:bg-toss-bg flex items-center justify-center text-toss-text-secondary">
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Places List Accordion */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 pt-4 border-t border-toss-border/40">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <p className="text-[11.5px] font-extrabold text-toss-text-secondary m-0">방문 코스 상세</p>
+                  <div className="flex items-center gap-1.5">
+                    {/* View Mode Toggle Buttons */}
+                    <div className="flex bg-toss-bg p-0.5 rounded-xl border border-toss-border/40">
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`flex items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${viewMode === 'list' ? 'bg-white text-toss-blue shadow-sm' : 'text-toss-text-secondary'}`}
+                      >
+                        <List className="w-3 h-3" /> 리스트
+                      </button>
+                      <button
+                        onClick={() => setViewMode('map')}
+                        disabled={!schedule.places || schedule.places.length === 0}
+                        className={`flex items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${viewMode === 'map' ? 'bg-white text-toss-blue shadow-sm' : 'text-toss-text-secondary disabled:opacity-40'}`}
+                      >
+                        <Map className="w-3 h-3" /> 지도
+                      </button>
+                    </div>
+
+                    {/* AI Optimize Button */}
+                    <button
+                      onClick={handleAIOptimize}
+                      disabled={isOptimizing || !schedule.places || schedule.places.length === 0}
+                      className="flex items-center gap-0.5 px-2 py-1 bg-gradient-to-r from-toss-blue to-purple-600 text-white rounded-xl text-[10px] font-extrabold shadow-sm active:opacity-90 disabled:opacity-40"
+                    >
+                      {isOptimizing ? (
+                        <div className="w-2.5 h-2.5 border-[2px] border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3" />
+                      )}
+                      AI 최적화
+                    </button>
+                  </div>
+                </div>
+
+                {optimizeError && (
+                  <div className="mb-3 p-3 bg-red-50 text-red-600 rounded-xl text-[11px] font-semibold flex items-start gap-1.5 border border-red-100">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <div className="flex-1">{optimizeError}</div>
+                    <button onClick={() => setOptimizeError(null)} className="text-[13px] font-bold opacity-75">&times;</button>
+                  </div>
+                )}
+
+                {viewMode === 'list' ? (
+                  <div className="space-y-3 pr-0.5 max-h-[350px] overflow-y-auto">
+                    {sortedPlaces.map((pl) => {
+                      if (pl.id === editingPlaceId) {
+                        return (
+                          <motion.div
+                            key={pl.id}
+                            layout
+                            className="p-3 bg-toss-bg rounded-xl space-y-2 border border-toss-blue/20"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
+                              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                <input 
+                                  type="checkbox" 
+                                  checked={useEditEndTime} 
+                                  onChange={e => {
+                                    setUseEditEndTime(e.target.checked);
+                                    if (!e.target.checked) setEditPEndTime('');
+                                    else {
+                                      let defaultEnd = '10:00';
+                                      if (editPStartTime) {
+                                        const [h, m] = editPStartTime.split(':').map(Number);
+                                        defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                                      }
+                                      setEditPEndTime(defaultEnd);
+                                    }
+                                  }} 
+                                  className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue"
+                                />
+                                <span className="text-[10px] font-bold text-toss-text-secondary">종료 시간 포함</span>
+                              </label>
+                            </div>
+
+                            <div className="grid grid-cols-12 gap-2">
+                              <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
+                                {!editPStartTime ? (
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setEditPStartTime('09:00')}
+                                    className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
+                                  >
+                                    ⏰ 시작 시간
+                                  </button>
+                                ) : (
+                                  <TimeInputGroup
+                                    label="시작"
+                                    value={editPStartTime}
+                                    onChange={setEditPStartTime}
+                                    onClear={() => setEditPStartTime('')}
+                                    dropdownId="editStartAmPm"
+                                    activeDropdown={activeDropdown}
+                                    onToggleDropdown={setActiveDropdown}
+                                  />
+                                )}
+                              </div>
+
+                              {useEditEndTime && (
+                                <div className="col-span-6">
+                                  {!editPEndTime ? (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setEditPEndTime('10:00')}
+                                      className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
+                                    >
+                                      ⏰ 종료 시간
+                                    </button>
+                                  ) : (
+                                    <TimeInputGroup
+                                      label="종료"
+                                      value={editPEndTime}
+                                      onChange={setEditPEndTime}
+                                      onClear={() => {
+                                        setEditPEndTime('');
+                                        setUseEditEndTime(false);
+                                      }}
+                                      dropdownId="editEndAmPm"
+                                      activeDropdown={activeDropdown}
+                                      onToggleDropdown={setActiveDropdown}
+                                    />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <input type="text" placeholder="방문지 이름" value={editPName} onChange={e => setEditPName(e.target.value)}
+                              className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" autoFocus />
+                            <input type="text" placeholder="메모" value={editPMemo} onChange={e => setEditPMemo(e.target.value)}
+                              className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
+                            <input type="text" placeholder="참고 URL" value={editPUrl} onChange={e => setEditPUrl(e.target.value)}
+                              className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
+                            <div className="flex gap-2 pt-1">
+                              <button onClick={cancelEditPlace} className="flex-1 py-1.8 rounded-xl text-[11px] font-bold text-toss-text-secondary bg-white border border-toss-border">취소</button>
+                              <button onClick={() => handleSaveEditPlace(pl.id)} disabled={!editPName.trim()} className="flex-1 py-1.8 rounded-xl text-[11px] font-extrabold text-white bg-toss-blue disabled:opacity-40">저장</button>
+                            </div>
+                          </motion.div>
+                        );
+                      }
+
+                      return (
+                        <motion.div
+                          key={pl.id}
+                          layout
+                          className={`flex flex-col gap-2 p-3 rounded-2xl border border-toss-border/30 bg-white ${pl.completed ? 'bg-green-50/10 border-l-4 border-l-toss-success' : 'shadow-sm'}`}
+                        >
+                          {/* Top row: Checkbox + Name & Memo + optional Time badge */}
+                          <div className="flex items-start gap-2.5">
+                            <button onClick={() => onTogglePlace(pl.id)} className="mt-0.5 flex-shrink-0 text-toss-blue">
+                              {pl.completed ? (
+                                <CheckCircle2 className="w-5 h-5 text-toss-success" />
+                              ) : (
+                                <Circle className="w-5 h-5 text-toss-text-tertiary" />
+                              )}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col gap-1">
+                                {pl.time && (
+                                  <div className="self-start">
+                                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-extrabold bg-toss-blue/5 text-toss-blue px-2 py-0.5 rounded-md">
+                                      ⏰ {pl.time}
+                                    </span>
+                                  </div>
+                                )}
+                                <p className={`text-[13px] font-bold tracking-tight leading-snug break-all ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
+                                  {pl.name}
+                                </p>
+                              </div>
+                              {pl.memo && (
+                                <p className={`text-[11px] mt-1 leading-snug break-all ${pl.completed ? 'text-toss-text-tertiary' : 'text-toss-text-secondary font-medium'}`}>
+                                  {pl.memo}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action row placed UNDERNEATH - solves mobile squished text width issues! */}
+                          <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-toss-border/30">
+                            <button
+                              onClick={(e) => handleGoogleMapsSearch(e, pl.name)}
+                              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-blue"
+                            >
+                              <Compass className="w-3 h-3" />
+                              <span>길찾기</span>
+                            </button>
+                            {pl.url && (
+                              <button
+                                onClick={(e) => handleLinkClick(e, pl.url)}
+                                className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-blue"
+                              >
+                                <Link2 className="w-3 h-3" />
+                                <span>링크</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); startEditPlace(pl); }}
+                              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-text-secondary"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>수정</span>
+                            </button>
+                            <button
+                              onClick={() => onDeletePlace(pl.id)}
+                              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-red-50 text-[10.5px] font-bold text-toss-danger"
+                            >
+                              <X className="w-3 h-3" />
+                              <span>삭제</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <TravelMap places={sortedPlaces} dateLabel={schedule.title} />
+                )}
+
+                {showAdd ? (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 p-3 bg-toss-bg rounded-xl space-y-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input 
+                          type="checkbox" 
+                          checked={useEndTime} 
+                          onChange={e => {
+                            setUseEndTime(e.target.checked);
+                            if (!e.target.checked) setPEndTime('');
+                            else {
+                              let defaultEnd = '10:00';
+                              if (pStartTime) {
+                                const [h, m] = pStartTime.split(':').map(Number);
+                                defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                              }
+                              setPEndTime(defaultEnd);
+                            }
+                          }} 
+                          className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue"
+                        />
+                        <span className="text-[10px] font-bold text-toss-text-secondary">종료 시간 포함</span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-12 gap-2">
+                      <div className={useEndTime ? "col-span-6" : "col-span-12"}>
+                        {!pStartTime ? (
+                          <button 
+                            type="button" 
+                            onClick={() => setPStartTime('09:00')}
+                            className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
+                          >
+                            ⏰ 시작 시간
+                          </button>
+                        ) : (
+                          <TimeInputGroup
+                            label="시작"
+                            value={pStartTime}
+                            onChange={setPStartTime}
+                            onClear={() => setPStartTime('')}
+                            dropdownId="addStartAmPm"
+                            activeDropdown={activeDropdown}
+                            onToggleDropdown={setActiveDropdown}
+                          />
+                        )}
+                      </div>
+
+                      {useEndTime && (
+                        <div className="col-span-6">
+                          {!pEndTime ? (
+                            <button 
+                              type="button" 
+                              onClick={() => setPEndTime('10:00')}
+                              className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
+                            >
+                              ⏰ 종료 시간
+                            </button>
+                          ) : (
+                            <TimeInputGroup
+                              label="종료"
+                              value={pEndTime}
+                              onChange={setPEndTime}
+                              onClear={() => {
+                                setPEndTime('');
+                                setUseEndTime(false);
+                              }}
+                              dropdownId="addEndAmPm"
+                              activeDropdown={activeDropdown}
+                              onToggleDropdown={setActiveDropdown}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <input type="text" placeholder="방문지 이름 (예: 에펠탑)" value={pName} onChange={e => setPName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" autoFocus />
+                    <input type="text" placeholder="메모 (예: 뮤지엄패스 지참)" value={pMemo} onChange={e => setPMemo(e.target.value)}
+                      className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
+                    <input type="text" placeholder="참고 URL (선택)" value={pUrl} onChange={e => setPUrl(e.target.value)}
+                      className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => setShowAdd(false)} className="flex-1 py-2 rounded-xl text-[12px] font-bold text-toss-text-secondary bg-white border border-toss-border">취소</button>
+                      <button onClick={handleAdd} disabled={!pName.trim()} className="flex-1 py-2 rounded-xl text-[12px] font-extrabold text-white bg-toss-blue disabled:opacity-40">추가</button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <button onClick={() => setShowAdd(true)}
+                    className="w-full mt-3 py-2 rounded-xl border border-dashed border-toss-border/70 text-[12px] font-bold text-toss-text-secondary hover:border-toss-blue hover:text-toss-blue active:bg-toss-bg flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />방문지 추가
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* AI Optimization Preview Modal for Mobile */}
+        <AnimatePresence>
+          {optimizedPreview && (
+            <div className="fixed inset-0 bg-black/55 backdrop-blur-sm z-[9999] flex items-end justify-center">
+              <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                className="bg-white rounded-t-3xl p-5 w-full max-h-[85vh] flex flex-col shadow-2xl border border-toss-border/55">
+                <div className="w-10 h-1 bg-toss-border rounded-full mx-auto mb-3" />
+                <div className="flex items-center gap-2 mb-3 shrink-0">
+                  <div className="w-7 h-7 bg-toss-blue/10 rounded-xl flex items-center justify-center text-toss-blue">
+                    <Sparkles className="w-3.5 h-3.5" strokeWidth={2.2} />
+                  </div>
+                  <h3 className="text-[16px] font-extrabold text-toss-text-primary">AI 동선 최적화 제안</h3>
+                </div>
+                
+                <p className="text-[12px] text-toss-text-secondary leading-relaxed mb-3 shrink-0">
+                  Gemini AI가 제안한 동선과 추천 시간 및 팁입니다.
+                </p>
+
+                <div className="flex-1 overflow-y-auto space-y-2 pr-0.5 mb-4">
+                  {optimizedPreview.map((pl, idx) => (
+                    <div key={idx} className="flex gap-2.5 p-3 bg-toss-bg rounded-xl border border-toss-border/60">
+                      <span className="w-5 h-5 rounded-full bg-toss-blue text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {pl.time && (
+                            <span className="text-[9.5px] font-extrabold bg-toss-blue/10 text-toss-blue px-1.5 py-0.5 rounded">
+                              ⏰ {pl.time}
+                            </span>
+                          )}
+                          <p className="text-[12px] font-bold text-toss-text-primary">{pl.name}</p>
+                        </div>
+                        {pl.memo && <p className="text-[11px] text-toss-text-secondary mt-1 leading-normal">{pl.memo}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 mt-auto shrink-0 pb-safe">
+                  <button onClick={() => setOptimizedPreview(null)}
+                    className="flex-1 py-3 rounded-2xl text-[13px] font-bold text-toss-text-secondary bg-toss-bg">
+                    취소
+                  </button>
+                  <button onClick={handleApplyOptimization}
+                    className="flex-1 py-3 rounded-2xl text-[13px] font-extrabold text-white bg-toss-blue shadow-md shadow-toss-blue/20">
+                    적용하기
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

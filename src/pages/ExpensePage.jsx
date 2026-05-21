@@ -13,6 +13,13 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
+  const [budget, setBudget] = useState(() => {
+    const saved = localStorage.getItem('trip_budget');
+    return saved ? parseInt(saved, 10) : 2000000;
+  });
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [tempBudget, setTempBudget] = useState(budget);
+
   const loadRates = async (force = false) => {
     setLoading(true);
     const result = await fetchExchangeRates(force);
@@ -49,119 +56,286 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
     return a + (r ? convertToKRW(e.amount, e.currency, r) : 0);
   }, 0);
 
+  const remaining = budget - totalKRW;
+  const progressPercent = budget > 0 ? Math.min(Math.round((totalKRW / budget) * 100), 100) : 0;
+
+  const handleSaveBudget = () => {
+    const num = parseInt(tempBudget, 10) || 0;
+    setBudget(num);
+    localStorage.setItem('trip_budget', num.toString());
+    setIsEditingBudget(false);
+  };
+
   return (
     <div className="pb-6">
-      {/* Header with Add Button on Desktop */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="px-4 sm:px-5 pt-2 pb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-[24px] sm:text-[26px] md:text-[28px] font-bold text-toss-text-primary tracking-tight">가계부</h1>
-          <p className="text-[13px] sm:text-[14px] text-toss-text-secondary mt-1">여행 경비를 스마트하게 관리하세요 💰</p>
-        </div>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAdd(true)}
-          className="hidden md:flex items-center gap-1.5 px-4 py-2.5 bg-toss-blue text-white rounded-xl text-[14px] font-semibold shadow-sm hover:bg-toss-blue-dark">
-          <Plus className="w-4 h-4" /> 지출 기록
-        </motion.button>
-      </motion.div>
-
-      {/* Grid container for stats cards (Responsive layout) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mx-4 sm:mx-5 mb-6">
-        {/* Total Card */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-toss-blue to-blue-600 rounded-2xl p-5 text-white md:col-span-2 flex flex-col justify-between shadow-md shadow-toss-blue/15 min-h-[160px]">
+      {/* ==================== DESKTOP UI ==================== */}
+      <div className="hidden md:block">
+        {/* Header with Add Button on Desktop */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="px-4 sm:px-5 pt-2 pb-4 flex items-center justify-between">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[13px] sm:text-[14px] font-medium opacity-80">총 지출</span>
-              <Wallet className="w-5 h-5 opacity-60" />
-            </div>
-            <p className="text-[28px] sm:text-[32px] md:text-[36px] font-extrabold tabular-nums">₩{formatKRW(totalKRW)}</p>
+            <h1 className="text-[24px] sm:text-[26px] md:text-[28px] font-bold text-toss-text-primary tracking-tight">가계부</h1>
+            <p className="text-[13px] sm:text-[14px] text-toss-text-secondary mt-1">여행 경비를 스마트하게 관리하세요 💰</p>
           </div>
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/20">
-            <Clock className="w-3.5 h-3.5 opacity-60" />
-            <span className="text-[10px] sm:text-[11px] opacity-70">현재 환율 기준: {formatRateTime(lastUpdated)}</span>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => loadRates(true)} disabled={loading} className="ml-auto p-1 rounded-full hover:bg-white/10 btn-icon-sm">
-              <RefreshCw className={`w-3.5 h-3.5 opacity-70 ${loading ? 'animate-spin' : ''}`} />
-            </motion.button>
-          </div>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-toss-blue text-white rounded-xl text-[14px] font-semibold shadow-sm hover:bg-toss-blue-dark">
+            <Plus className="w-4 h-4" /> 지출 기록
+          </motion.button>
         </motion.div>
 
-        {/* Exchange Rates Card */}
-        {rates && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-            className="toss-card md:col-span-1 flex flex-col justify-between">
+        {/* Grid container for stats cards (Responsive layout) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mx-4 sm:mx-5 mb-6">
+          {/* Total Card */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="bg-gradient-to-br from-toss-blue to-blue-600 rounded-2xl p-5 text-white md:col-span-2 flex flex-col justify-between shadow-md shadow-toss-blue/15 min-h-[160px]">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <ArrowRightLeft className="w-4 h-4 text-toss-blue" />
-                  <span className="text-[13px] font-semibold text-toss-text-primary">주요 환율</span>
-                </div>
-                <span className="text-[10px] text-toss-text-tertiary">{formatRateTime(lastUpdated)} 기준</span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[13px] sm:text-[14px] font-medium opacity-80">총 지출</span>
+                <Wallet className="w-5 h-5 opacity-60" />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 max-h-[120px] md:max-h-[150px] overflow-y-auto pr-1">
-                {CURRENCIES.slice(0, 4).map(c => (
-                  <div key={c.code} className="flex items-center justify-between px-3 py-1.5 bg-toss-bg rounded-xl">
-                    <span className="text-[11px] sm:text-[12px]">{c.flag} 1{c.code}</span>
-                    <span className="text-[11px] sm:text-[12px] font-semibold tabular-nums text-toss-text-primary">₩{formatKRW(rates[c.code] || 0)}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="text-[28px] sm:text-[32px] md:text-[36px] font-extrabold tabular-nums">₩{formatKRW(totalKRW)}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/20">
+              <Clock className="w-3.5 h-3.5 opacity-60" />
+              <span className="text-[10px] sm:text-[11px] opacity-70">현재 환율 기준: {formatRateTime(lastUpdated)}</span>
+              <motion.button whileTap={{ scale: 0.9 }} onClick={() => loadRates(true)} disabled={loading} className="ml-auto p-1 rounded-full hover:bg-white/10 btn-icon-sm">
+                <RefreshCw className={`w-3.5 h-3.5 opacity-70 ${loading ? 'animate-spin' : ''}`} />
+              </motion.button>
             </div>
           </motion.div>
-        )}
+
+          {/* Exchange Rates Card */}
+          {rates && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+              className="toss-card md:col-span-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowRightLeft className="w-4 h-4 text-toss-blue" />
+                    <span className="text-[13px] font-semibold text-toss-text-primary">주요 환율</span>
+                  </div>
+                  <span className="text-[10px] text-toss-text-tertiary">{formatRateTime(lastUpdated)} 기준</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-1 gap-2 max-h-[120px] md:max-h-[150px] overflow-y-auto pr-1">
+                  {CURRENCIES.slice(0, 4).map(c => (
+                    <div key={c.code} className="flex items-center justify-between px-3 py-1.5 bg-toss-bg rounded-xl">
+                      <span className="text-[11px] sm:text-[12px]">{c.flag} 1{c.code}</span>
+                      <span className="text-[11px] sm:text-[12px] font-semibold tabular-nums text-toss-text-primary">₩{formatKRW(rates[c.code] || 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Expense List */}
+        <div className="px-4 sm:px-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[15px] sm:text-[16px] font-bold text-toss-text-primary">지출 내역</span>
+            <span className="text-[13px] text-toss-text-secondary">{expenses.length}건</span>
+          </div>
+          
+          <div className="space-y-2.5">
+            <AnimatePresence mode="popLayout">
+              {expenses.map((e, i) => {
+                const expRate = e.rateSnapshot || rates;
+                const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
+                return (
+                  <motion.div key={e.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }}
+                    transition={{ delay: i * 0.03 }} className="toss-card hover:shadow-md transition-shadow duration-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-toss-blue-light rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span className="text-[14px] sm:text-[16px]">{getCategoryEmoji(e.category)}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] sm:text-[14px] font-semibold text-toss-text-primary truncate">{e.description}</p>
+                        <p className="text-[11px] sm:text-[12px] text-toss-text-secondary">{e.paidBy} • {getCategoryLabel(e.category)}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-[13px] sm:text-[14px] font-bold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
+                        <p className="text-[10px] sm:text-[11px] text-toss-text-secondary tabular-nums">₩{formatKRW(krw)}</p>
+                      </div>
+                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleRemove(e.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
+                        <X className="w-3.5 h-3.5 text-toss-text-tertiary" />
+                      </motion.button>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-1 pl-11 sm:pl-13">
+                      <Clock className="w-3 h-3 text-toss-text-tertiary" />
+                      <span className="text-[9px] sm:text-[10px] text-toss-text-tertiary">
+                        {formatRateTime(e.rateSnapshotTime || e.createdAt)} 환율
+                        {expRate && e.currency && ` · 1${e.currency}=₩${formatKRW(expRate[e.currency] || 0)}`}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+
+            {expenses.length === 0 && (
+              <div className="flex flex-col items-center py-16 bg-white rounded-2xl border border-toss-border/60">
+                <div className="w-16 h-16 bg-toss-blue-light rounded-full flex items-center justify-center mb-4">
+                  <TrendingUp className="w-8 h-8 text-toss-blue" />
+                </div>
+                <p className="text-[16px] font-semibold text-toss-text-primary mb-1">지출 내역이 없어요</p>
+                <p className="text-[14px] text-toss-text-secondary">첫 지출을 추가하고 함께 정산해 보세요</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Expense List */}
-      <div className="px-4 sm:px-5">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-[15px] sm:text-[16px] font-bold text-toss-text-primary">지출 내역</span>
-          <span className="text-[13px] text-toss-text-secondary">{expenses.length}건</span>
+      {/* ==================== MOBILE UI ==================== */}
+      <div className="block md:hidden -mx-4 -mt-6 pb-12 bg-slate-50 min-h-screen">
+        {/* Mobile Header Banner */}
+        <div className="bg-gradient-to-b from-toss-blue via-toss-blue to-indigo-650 text-white pt-6 pb-8 px-5 rounded-b-[36px] shadow-lg shadow-toss-blue/15 relative overflow-hidden flex flex-col gap-4">
+          <div className="absolute right-[-20px] bottom-[-20px] opacity-10 pointer-events-none">
+            <Wallet className="w-40 h-40 rotate-12" />
+          </div>
+
+          <div className="relative z-10 flex flex-col gap-1">
+            <h2 className="text-[23px] font-extrabold tracking-tight">경비 가계부 💰</h2>
+            <p className="text-[12.5px] font-semibold text-white/80">
+              우리 팀의 실시간 경비 내역을 기록하고 확인하세요.
+            </p>
+          </div>
         </div>
-        
-        {/* Large screen layout structure */}
-        <div className="space-y-2.5">
-          <AnimatePresence mode="popLayout">
-            {expenses.map((e, i) => {
+
+        {/* Mobile Budget Dashboard Card */}
+        <div className="mx-5 -mt-5 relative z-10 bg-white border border-toss-border/55 rounded-3xl p-5 shadow-lg shadow-toss-blue/5">
+          {isEditingBudget ? (
+            <div className="space-y-3">
+              <label className="text-[11px] font-extrabold text-toss-text-secondary">여행 총 예산 설정 (₩)</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={tempBudget}
+                  onChange={(e) => setTempBudget(e.target.value)}
+                  className="flex-1 px-3 py-2 bg-toss-bg rounded-xl text-[14px] font-bold border-0 outline-none focus:ring-2 focus:ring-toss-blue/20"
+                />
+                <button onClick={handleSaveBudget} className="px-4 py-2 bg-toss-blue text-white font-extrabold text-[12.5px] rounded-xl shadow-sm">
+                  저장
+                </button>
+                <button onClick={() => { setIsEditingBudget(false); setTempBudget(budget); }} className="px-3 py-2 bg-toss-bg text-toss-text-secondary font-semibold text-[12.5px] rounded-xl">
+                  취소
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-extrabold text-toss-text-secondary">남은 예산</span>
+                  <span className={`text-[22px] font-extrabold tracking-tight ${remaining < 0 ? 'text-toss-danger' : 'text-toss-blue'}`}>
+                    ₩{formatKRW(remaining)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => { setIsEditingBudget(true); setTempBudget(budget); }}
+                  className="px-2.5 py-1.2 bg-toss-blue/5 text-toss-blue hover:bg-toss-blue/10 transition-colors text-[11px] font-extrabold rounded-lg"
+                >
+                  예산 편집
+                </button>
+              </div>
+
+              {/* Toss-style progress bar */}
+              <div className="space-y-2">
+                <div className="w-full h-3 bg-toss-bg rounded-full overflow-hidden relative">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${progressPercent >= 90 ? 'bg-toss-danger' : progressPercent >= 70 ? 'bg-orange-500' : 'bg-toss-blue'}`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-bold text-toss-text-secondary">
+                  <span>사용 예산 {progressPercent}%</span>
+                  <span>총 ₩{formatKRW(budget)} 중 ₩{formatKRW(totalKRW)} 사용</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sleek Exchange Rates Grid (iOS layout) */}
+        {rates && (
+          <div className="mx-5 mt-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-toss-blue" />
+                <span className="text-[12.5px] font-extrabold text-toss-text-primary">오늘의 실시간 환율</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-toss-text-tertiary font-medium">{formatRateTime(lastUpdated)}</span>
+                <button onClick={() => loadRates(true)} disabled={loading} className="p-1 text-toss-text-tertiary active:scale-90">
+                  <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {CURRENCIES.slice(0, 4).map(c => (
+                <div key={c.code} className="bg-white border border-toss-border/50 rounded-2xl p-3 flex flex-col justify-between shadow-sm min-h-[64px]">
+                  <span className="text-[11px] font-bold text-toss-text-secondary">{c.flag} 1 {c.code}</span>
+                  <span className="text-[14px] font-extrabold text-toss-text-primary mt-1">₩{formatKRW(rates[c.code] || 0)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Premium Expense list */}
+        <div className="mx-5 mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[13px] font-extrabold text-toss-text-secondary">지출 기록 내역</span>
+            <span className="text-[13px] font-extrabold text-toss-blue">{expenses.length}건</span>
+          </div>
+
+          <div className="space-y-3">
+            {expenses.map((e, idx) => {
               const expRate = e.rateSnapshot || rates;
               const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
               return (
-                <motion.div key={e.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }}
-                  transition={{ delay: i * 0.03 }} className="toss-card hover:shadow-md transition-shadow duration-200">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-toss-blue-light rounded-xl flex items-center justify-center flex-shrink-0">
-                      <span className="text-[14px] sm:text-[16px]">{getCategoryEmoji(e.category)}</span>
+                <div key={e.id} className="bg-white rounded-2xl p-4 border border-toss-border/55 shadow-sm relative overflow-hidden flex flex-col gap-2.5">
+                  {/* Header portion */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-toss-blue/5 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-[16px]">{getCategoryEmoji(e.category)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] sm:text-[14px] font-semibold text-toss-text-primary truncate">{e.description}</p>
-                      <p className="text-[11px] sm:text-[12px] text-toss-text-secondary">{e.paidBy} • {getCategoryLabel(e.category)}</p>
+                      <p className="text-[13.5px] font-extrabold text-toss-text-primary leading-snug break-all">{e.description}</p>
+                      <p className="text-[11.5px] text-toss-text-secondary font-semibold mt-0.5">{e.paidBy} • {getCategoryLabel(e.category)}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-[13px] sm:text-[14px] font-bold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
-                      <p className="text-[10px] sm:text-[11px] text-toss-text-secondary tabular-nums">₩{formatKRW(krw)}</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-[14px] font-extrabold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
+                      <p className="text-[11px] text-toss-text-secondary font-semibold mt-0.5 tabular-nums">₩{formatKRW(krw)}</p>
                     </div>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleRemove(e.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
-                      <X className="w-3.5 h-3.5 text-toss-text-tertiary" />
-                    </motion.button>
                   </div>
-                  <div className="mt-1.5 flex items-center gap-1 pl-11 sm:pl-13">
-                    <Clock className="w-3 h-3 text-toss-text-tertiary" />
-                    <span className="text-[9px] sm:text-[10px] text-toss-text-tertiary">
-                      {formatRateTime(e.rateSnapshotTime || e.createdAt)} 환율
-                      {expRate && e.currency && ` · 1${e.currency}=₩${formatKRW(expRate[e.currency] || 0)}`}
-                    </span>
+
+                  {/* Bottom details portion */}
+                  <div className="flex items-center justify-between pt-2 border-t border-toss-border/30">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-toss-text-tertiary" />
+                      <span className="text-[10px] text-toss-text-tertiary font-medium">
+                        {formatRateTime(e.rateSnapshotTime || e.createdAt)} 기준 (1{e.currency}=₩{formatKRW(expRate ? expRate[e.currency] : 0)})
+                      </span>
+                    </div>
+
+                    <button onClick={() => handleRemove(e.id)} className="px-2 py-1 bg-red-50 text-[10px] font-bold text-toss-danger rounded-lg active:scale-95">
+                      삭제
+                    </button>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-          </AnimatePresence>
 
-          {expenses.length === 0 && (
-            <div className="flex flex-col items-center py-16 bg-white rounded-2xl border border-toss-border/60">
-              <div className="w-16 h-16 bg-toss-blue-light rounded-full flex items-center justify-center mb-4">
-                <TrendingUp className="w-8 h-8 text-toss-blue" />
+            {expenses.length === 0 && (
+              <div className="flex flex-col items-center py-16 bg-white rounded-2xl border border-toss-border/50 text-center">
+                <div className="w-14 h-14 bg-toss-blue-light rounded-full flex items-center justify-center mb-3">
+                  <TrendingUp className="w-7 h-7 text-toss-blue" />
+                </div>
+                <p className="text-[15px] font-bold text-toss-text-primary mb-0.5">지출 기록이 없습니다</p>
+                <p className="text-[12.5px] text-toss-text-secondary">첫 지출을 추가하고 함께 정산해보세요</p>
               </div>
-              <p className="text-[16px] font-semibold text-toss-text-primary mb-1">지출 내역이 없어요</p>
-              <p className="text-[14px] text-toss-text-secondary">첫 지출을 추가하고 함께 정산해 보세요</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
