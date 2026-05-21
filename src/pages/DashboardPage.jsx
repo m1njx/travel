@@ -63,16 +63,27 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
   const activeMemberTeamIds = activeMember?.teamIds || [];
   const activeMemberTeams = teams.filter(t => activeMemberTeamIds.includes(t.id));
 
+  // Helper to determine if a schedule is completed
+  const isScheduleCompleted = (s) => {
+    if (s.completed) return true;
+    if (s.places && s.places.length > 0) {
+      return s.places.every(p => p.completed);
+    }
+    return false;
+  };
+
   // Schedule filtering for D-Day and Bulletin Board Lists
   const sortedSchedules = [...schedules]
     .filter(s => s.date && s.date !== '날짜 미정')
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
+  const activeSchedules = sortedSchedules.filter(s => !isScheduleCompleted(s));
+
   const todayStr = new Date().toISOString().split('T')[0];
-  const upcomingSchedules = sortedSchedules.filter(s => s.date >= todayStr);
-  const nearestSchedule = upcomingSchedules.length > 0 ? upcomingSchedules[0] : sortedSchedules[0];
+  const upcomingSchedules = activeSchedules.filter(s => s.date >= todayStr);
+  const nearestSchedule = upcomingSchedules.length > 0 ? upcomingSchedules[0] : activeSchedules[0];
   const remainingSchedules = nearestSchedule 
-    ? sortedSchedules.filter(s => s.id !== nearestSchedule.id)
+    ? activeSchedules.filter(s => s.id !== nearestSchedule.id)
     : [];
 
   // Exchange rates state
@@ -280,7 +291,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
 
   // D-Day Calculations
   const getDDayInfo = () => {
-    const validSchedules = schedules.filter(s => s.date && s.date !== '날짜 미정');
+    const validSchedules = activeSchedules.filter(s => s.date && s.date !== '날짜 미정');
     if (validSchedules.length === 0) {
       return { dDayText: 'D-?', subText: '일정을 등록해주세요 🗓️', targetDate: null };
     }
@@ -783,20 +794,11 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           <div className="relative z-10 flex flex-col gap-1.5">
             {/* Dynamic Active Team Badges */}
             <div className="flex flex-wrap gap-1.5">
-              {activeMemberTeams.length > 0 ? (
-                activeMemberTeams.map(team => (
-                  <span key={team.id} className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
-                    ✈️ {team.name}
-                  </span>
-                ))
-              ) : (
-                <span className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
-                  🌍 자유 여행팀
+              {activeMemberTeams.map(team => (
+                <span key={team.id} className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
+                  ✈️ {team.name}
                 </span>
-              )}
-              <span className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
-                ♿ 장애인 학생
-              </span>
+              ))}
             </div>
 
             <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight mt-1.5">
@@ -855,15 +857,15 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           </div>
         </div>
 
-        {/* Dynamic Highlight Card (장애인 학생에게 중요한 공지) */}
+        {/* Dynamic Highlight Card (가장 가까운 일정 공지) */}
         <div className="flex flex-col mt-5">
           <div className="flex items-center justify-between px-5 mb-3.5">
             <div className="flex items-center gap-1.5 font-bold text-toss-text-primary text-[15px]">
               <span className="text-[16px]">🎯</span>
-              <span>장애인 학생에게 중요한 공지</span>
+              <span>{nearestSchedule ? `${nearestSchedule.date} 중요 공지` : '중요 공지'}</span>
             </div>
             <span className="text-[11.5px] font-bold text-toss-blue bg-toss-blue-light/50 px-2.5 py-0.5 rounded-full shrink-0">
-              1건
+              {nearestSchedule ? '1건' : '0건'}
             </span>
           </div>
 
@@ -921,11 +923,29 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                 <p className="text-[12px] text-toss-text-tertiary italic mt-0.5">등록된 세부 코스 정보가 존재하지 않습니다.</p>
               )}
 
-              <div className="flex justify-between items-center mt-2.5 border-t border-toss-border/40 pt-3 text-[11.5px] text-toss-blue font-extrabold">
-                <span>전체 코스 및 메모 확인하기</span>
-                <div className="flex items-center text-toss-blue">
-                  <span className="text-[10px]">이동</span>
-                  <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              {/* Action Buttons Panel */}
+              <div className="flex gap-2 mt-2.5 border-t border-toss-border/40 pt-3 text-[11.5px] font-bold">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updatedPlaces = nearestSchedule.places 
+                      ? nearestSchedule.places.map(p => ({ ...p, completed: true })) 
+                      : [];
+                    schedulesSync.updateItem({ ...nearestSchedule, completed: true, places: updatedPlaces });
+                  }}
+                  className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm btn-icon-sm"
+                >
+                  <Check className="w-4 h-4" /> 완료 처리
+                </button>
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigateToSchedule(nearestSchedule.date);
+                  }}
+                  className="flex-1 py-2 bg-toss-bg hover:bg-toss-border/30 text-toss-text-secondary rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer text-center"
+                >
+                  <span>상세 이동</span> <ChevronRight className="w-4 h-4" />
                 </div>
               </div>
             </div>
@@ -936,12 +956,12 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           )}
         </div>
 
-        {/* Bulletin Feed Section (우리학교 학생들이 많이 본 게시글) */}
+        {/* Bulletin Feed Section (기대되는 다음 일정들) */}
         <div className="flex flex-col mt-5">
           <div className="flex items-center justify-between px-5 mb-3.5">
             <div className="flex items-center gap-1.5 font-bold text-toss-text-primary text-[15px]">
               <span className="text-[16px]">🔥</span>
-              <span>우리학교 학생들이 많이 본 게시글</span>
+              <span>기대되는 다음 일정들</span>
             </div>
             <span className="text-[11.5px] font-medium text-toss-text-tertiary">
               {remainingSchedules.length}건

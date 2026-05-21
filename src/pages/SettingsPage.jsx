@@ -402,16 +402,16 @@ export default function SettingsPage({
               <div className="space-y-2">
                 <input type="text" placeholder="팀명 (예: 런던팀)" value={newTeamName} onChange={e => setNewTeamName(e.target.value)}
                   className="w-full px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
+                <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
                     <label className="text-[10px] font-bold text-toss-text-secondary pl-1 block mb-0.5">시작일</label>
                     <input type="date" value={newTeamStartDate} onChange={e => setNewTeamStartDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-toss-bg rounded-xl text-[12.5px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
+                      className="w-full min-w-0 px-2.5 py-2 bg-toss-bg rounded-xl text-[12px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all block" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <label className="text-[10px] font-bold text-toss-text-secondary pl-1 block mb-0.5">종료일</label>
                     <input type="date" value={newTeamEndDate} onChange={e => setNewTeamEndDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-toss-bg rounded-xl text-[12.5px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
+                      className="w-full min-w-0 px-2.5 py-2 bg-toss-bg rounded-xl text-[12px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all block" />
                   </div>
                 </div>
               </div>
