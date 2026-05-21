@@ -537,14 +537,12 @@ export default function SettingsPage({
               </AnimatePresence>
             </div>
             
-            <div className="space-y-2 pt-2 border-t border-toss-border/60">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input type="text" placeholder="이름" value={newMemberName} onChange={e => setNewMemberName(e.target.value)}
-                  className="flex-1 px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
-                <input type="text" placeholder="초대 코드 (6자리)" value={newMemberCode} onChange={e => setNewMemberCode(e.target.value.toUpperCase())}
-                  maxLength={6}
-                  className="w-full sm:w-[180px] px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 text-left sm:text-center font-bold tracking-wider uppercase outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
-              </div>
+            <div className="space-y-2.5 pt-2 border-t border-toss-border/60">
+              <input type="text" placeholder="이름" value={newMemberName} onChange={e => setNewMemberName(e.target.value)}
+                className="w-full px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
+              <input type="text" placeholder="초대 코드 (6자리)" value={newMemberCode} onChange={e => setNewMemberCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="w-full px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 text-left font-bold tracking-wider uppercase outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all text-toss-blue" />
               
               {teams && teams.length > 0 && (
                 <div className="px-1 py-1">
@@ -593,9 +591,9 @@ export default function SettingsPage({
             <div className="flex items-start gap-2 mb-3.5 px-3 py-2.5 bg-toss-blue-light rounded-xl">
               <Info className="w-4.5 h-4.5 text-toss-blue mt-0.5 flex-shrink-0" />
               <p className="text-[11.5px] sm:text-[12px] text-toss-blue leading-relaxed">
-                {isEnvKey 
-                  ? '.env 파일에서 API 키가 연동되어 영수증 스캔 기능이 활성화되었습니다.' 
-                  : '영수증 OCR AI 스캔 기능을 사용하려면 Gemini API 키를 입력해 주세요.'}
+                {isEnvKey || apiKey
+                  ? 'Gemini API 키가 연동되어 AI 서비스가 활성화되었습니다. (호출 모델: gemini-2.5-flash / gemini-1.5-flash)'
+                  : 'AI 추천, 일정 최적화 및 영수증 OCR 스캔을 사용하려면 Gemini API 키를 등록해 주세요.'}
               </p>
             </div>
             {isEnvKey ? (
