@@ -1116,32 +1116,48 @@ function ScheduleModal({ schedule, onSave, onClose }) {
       <motion.div initial={{ y: '100%', scale: 1 }} animate={{ y: 0, scale: 1 }} exit={{ y: '100%', scale: 0.95 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         onClick={e => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-t-3xl md:rounded-3xl p-5 sm:p-6 md:p-8 safe-bottom modal-sheet md:my-auto md:max-h-[85vh] overflow-y-auto">
         <div className="w-10 h-1 bg-toss-border rounded-full mx-auto mb-6 md:hidden" />
-        <h2 className="text-[20px] md:text-[22px] font-bold text-toss-text-primary mb-6">{schedule ? '일정 수정' : '새 일정 추가'}</h2>
+        
+        {/* Header with Title and Action buttons on top right */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-[19px] sm:text-[21px] font-extrabold text-toss-text-primary tracking-tight">
+            {schedule ? '일정 수정' : '새 일정 추가'}
+          </h2>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="px-3.5 py-2 rounded-xl text-[13px] font-bold text-toss-text-secondary bg-toss-bg hover:bg-toss-border/40 transition-colors">
+              취소
+            </button>
+            <motion.button 
+              whileTap={{ scale: 0.95 }} 
+              onClick={save} 
+              disabled={!title.trim() || !date}
+              className="px-4 py-2 rounded-xl text-[13px] font-bold text-white bg-toss-blue hover:bg-toss-blue-dark disabled:opacity-40 shadow-sm transition-colors"
+            >
+              {schedule ? '수정' : '추가'}
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Form Body */}
         <div className="space-y-4">
           <div>
             <label className="text-[13px] font-semibold text-toss-text-secondary mb-2 block">일정 제목</label>
             <input type="text" placeholder="예: 파리 에펠탑 투어" value={title} onChange={e => setTitle(e.target.value)}
-              className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0" autoFocus />
+              className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" autoFocus />
           </div>
           <div>
             <label className="text-[13px] font-semibold text-toss-text-secondary mb-2 block">날짜</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0" />
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
           </div>
           <div>
             <label className="text-[13px] font-semibold text-toss-text-secondary mb-2 block">참고 URL (선택)</label>
             <input type="text" placeholder="예: google.com 또는 https://maps.google.com" value={url} onChange={e => setUrl(e.target.value)}
-              className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0" />
+              className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
           </div>
           <div>
             <label className="text-[13px] font-semibold text-toss-text-secondary mb-2 block">설명 (선택)</label>
             <textarea placeholder="간단한 설명을 추가하세요" value={desc} onChange={e => setDesc(e.target.value)} rows={2}
-              className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0 resize-none" />
+              className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-[15px] border-0 resize-none outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
           </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-4 rounded-2xl text-[15px] font-semibold text-toss-text-secondary bg-toss-bg">취소</button>
-          <motion.button whileTap={{ scale: 0.97 }} onClick={save} disabled={!title.trim() || !date}
-            className="flex-1 py-4 rounded-2xl text-[15px] font-semibold text-white bg-toss-blue disabled:opacity-40">{schedule ? '수정' : '추가'}</motion.button>
         </div>
       </motion.div>
     </motion.div>
