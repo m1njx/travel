@@ -16,7 +16,7 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
   const loadRates = async (force = false) => {
     setLoading(true);
     try {
-      if (force && apiKey) {
+      if ((force || !rates) && apiKey) {
         // Use Gemini API Search Grounding for real-time rates
         const result = await getLiveRatesWithGemini(apiKey);
         setRates(result.rates);

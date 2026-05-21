@@ -7,6 +7,34 @@ import { fetchExchangeRates } from '../utils/exchangeRate';
 export default function SettlePage({ members, expenses = [], nickname }) {
   const [currentRates, setCurrentRates] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [completedTransfers, setCompletedTransfers] = useState(() => {
+    try {
+      const stored = localStorage.getItem('tripsync_completed_transfers');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleTransferComplete = (from, to, amount) => {
+    const key = `${from}_${to}_${amount}`;
+    setCompletedTransfers(prev => {
+      const next = prev.includes(key)
+        ? prev.filter(k => k !== key)
+        : [...prev, key];
+      try {
+        localStorage.setItem('tripsync_completed_transfers', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
+  const isTransferComplete = (from, to, amount) => {
+    const key = `${from}_${to}_${amount}`;
+    return completedTransfers.includes(key);
+  };
 
   useEffect(() => {
     fetchExchangeRates().then(r => setCurrentRates(r.rates));
@@ -107,6 +135,14 @@ export default function SettlePage({ members, expenses = [], nickname }) {
   const totalToPay = myTransfers.toPay.reduce((sum, t) => sum + t.amount, 0);
   const totalToReceive = myTransfers.toReceive.reduce((sum, t) => sum + t.amount, 0);
 
+  const pendingToPay = useMemo(() => {
+    return myTransfers.toPay.filter(t => !isTransferComplete(t.from, t.to, t.amount)).reduce((sum, t) => sum + t.amount, 0);
+  }, [myTransfers.toPay, completedTransfers]);
+
+  const pendingToReceive = useMemo(() => {
+    return myTransfers.toReceive.filter(t => !isTransferComplete(t.from, t.to, t.amount)).reduce((sum, t) => sum + t.amount, 0);
+  }, [myTransfers.toReceive, completedTransfers]);
+
   // Custom gradients for member avatars on mobile
   const getGradientForName = (name) => {
     const gradients = [
@@ -201,28 +237,51 @@ export default function SettlePage({ members, expenses = [], nickname }) {
                 <ArrowUpRight className="w-6 h-6 shrink-0" />
                 <div>
                   <p className="text-[14px] font-semibold">보내야 할 총 금액</p>
-                  <p className="text-[22px] sm:text-[24px] font-extrabold tabular-nums">₩{formatKRW(totalToPay)}</p>
+                  <p className="text-[22px] sm:text-[24px] font-extrabold tabular-nums">
+                    ₩{formatKRW(totalToPay)}
+                    {pendingToPay === 0 ? (
+                      <span className="text-[12px] text-toss-success bg-green-50 px-2.5 py-0.5 rounded-full font-bold ml-2.5 inline-block align-middle border border-toss-success/20">
+                        송금 완료! 🎉
+                      </span>
+                    ) : pendingToPay !== totalToPay ? (
+                      <span className="text-[13px] text-toss-text-secondary ml-2 font-normal">
+                        (남은 금액: <strong className="text-toss-danger font-bold">₩{formatKRW(pendingToPay)}</strong>)
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
               </div>
               
               <div className="bg-toss-bg/50 p-4 rounded-2xl space-y-3">
-                {myTransfers.toPay.map((t, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-[13px] sm:text-[14px]">
-                    <span className="text-toss-text-secondary">
-                      <strong className="text-toss-text-primary font-bold">{t.to}</strong>님에게
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span className="font-extrabold text-toss-text-primary tabular-nums">₩{formatKRW(t.amount)}</span>
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => alert(`₩${formatKRW(t.amount)}원 복사 완료! 팀원의 계좌로 이체해 주세요.`)}
-                        className="px-2.5 py-1 bg-white border border-toss-border text-[11px] font-bold rounded-lg hover:bg-toss-bg"
-                      >
-                        금액 복사
-                      </motion.button>
+                {myTransfers.toPay.map((t, idx) => {
+                  const isDone = isTransferComplete(t.from, t.to, t.amount);
+                  return (
+                    <div key={idx} className={`flex items-center justify-between text-[13px] sm:text-[14px] p-1.5 rounded-xl transition-all duration-200 ${isDone ? 'opacity-50 bg-green-50/20' : ''}`}>
+                      <span className="text-toss-text-secondary">
+                        <strong className="text-toss-text-primary font-bold">{t.to}</strong>님에게
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className={`font-extrabold tabular-nums ${isDone ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>₩{formatKRW(t.amount)}</span>
+                        {!isDone && (
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => alert(`₩${formatKRW(t.amount)}원 복사 완료! 팀원의 계좌로 이체해 주세요.`)}
+                            className="px-2.5 py-1 bg-white border border-toss-border text-[11px] font-bold rounded-lg hover:bg-toss-bg shrink-0"
+                          >
+                            금액 복사
+                          </motion.button>
+                        )}
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => toggleTransferComplete(t.from, t.to, t.amount)}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg shrink-0 transition-colors ${isDone ? 'bg-toss-success text-white' : 'bg-toss-blue-light text-toss-blue border border-toss-blue/20'}`}
+                        >
+                          {isDone ? '보냄 ✓' : '보냄 처리'}
+                        </motion.button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : totalToReceive > 0 ? (
@@ -231,19 +290,42 @@ export default function SettlePage({ members, expenses = [], nickname }) {
                 <ArrowDownLeft className="w-6 h-6 shrink-0" />
                 <div>
                   <p className="text-[14px] font-semibold">받아야 할 총 금액</p>
-                  <p className="text-[22px] sm:text-[24px] font-extrabold tabular-nums">₩{formatKRW(totalToReceive)}</p>
+                  <p className="text-[22px] sm:text-[24px] font-extrabold tabular-nums">
+                    ₩{formatKRW(totalToReceive)}
+                    {pendingToReceive === 0 ? (
+                      <span className="text-[12px] text-toss-success bg-green-50 px-2.5 py-0.5 rounded-full font-bold ml-2.5 inline-block align-middle border border-toss-success/20">
+                        수령 완료! 🎉
+                      </span>
+                    ) : pendingToReceive !== totalToReceive ? (
+                      <span className="text-[13px] text-toss-text-secondary ml-2 font-normal">
+                        (남은 금액: <strong className="text-emerald-600 font-bold">₩{formatKRW(pendingToReceive)}</strong>)
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
               </div>
               
               <div className="bg-toss-bg/50 p-4 rounded-2xl space-y-3">
-                {myTransfers.toReceive.map((t, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-[13px] sm:text-[14px]">
-                    <span className="text-toss-text-secondary">
-                      <strong className="text-toss-text-primary font-bold">{t.from}</strong>님으로부터
-                    </span>
-                    <span className="font-extrabold text-toss-success tabular-nums">₩{formatKRW(t.amount)} 받기</span>
-                  </div>
-                ))}
+                {myTransfers.toReceive.map((t, idx) => {
+                  const isDone = isTransferComplete(t.from, t.to, t.amount);
+                  return (
+                    <div key={idx} className={`flex items-center justify-between text-[13px] sm:text-[14px] p-1.5 rounded-xl transition-all duration-200 ${isDone ? 'opacity-50 bg-green-50/20' : ''}`}>
+                      <span className="text-toss-text-secondary">
+                        <strong className="text-toss-text-primary font-bold">{t.from}</strong>님으로부터
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className={`font-extrabold tabular-nums ${isDone ? 'line-through text-toss-text-tertiary' : 'text-toss-success'}`}>₩{formatKRW(t.amount)} 받기</span>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => toggleTransferComplete(t.from, t.to, t.amount)}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg shrink-0 transition-colors ${isDone ? 'bg-toss-success text-white' : 'bg-toss-blue-light text-toss-blue border border-toss-blue/20'}`}
+                        >
+                          {isDone ? '받음 ✓' : '받음 처리'}
+                        </motion.button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -331,22 +413,34 @@ export default function SettlePage({ members, expenses = [], nickname }) {
               전체 정산 흐름
             </h3>
             <div className="space-y-2.5">
-              {settlements.transfers.map((t, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="toss-card bg-toss-blue-light/30 border border-toss-blue/10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3 text-left">
-                      <span className="text-[13px] sm:text-[14px] font-bold text-toss-text-primary">{t.from}</span>
-                      <ArrowRight className="w-4 h-4 text-toss-blue" />
-                      <span className="text-[13px] sm:text-[14px] font-bold text-toss-text-primary">{t.to}</span>
+              {settlements.transfers.map((t, i) => {
+                const isDone = isTransferComplete(t.from, t.to, t.amount);
+                return (
+                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                    className={`toss-card border transition-all duration-200 ${isDone ? 'opacity-50 bg-green-50/10 border-toss-success/30' : 'bg-toss-blue-light/30 border-toss-blue/10'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 sm:gap-3 text-left">
+                        <span className={`text-[13px] sm:text-[14px] font-bold text-toss-text-primary ${isDone ? 'line-through text-toss-text-tertiary' : ''}`}>{t.from}</span>
+                        <ArrowRight className="w-4 h-4 text-toss-blue" />
+                        <span className={`text-[13px] sm:text-[14px] font-bold text-toss-text-primary ${isDone ? 'line-through text-toss-text-tertiary' : ''}`}>{t.to}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className={`text-[15px] sm:text-[16px] font-extrabold tabular-nums ${isDone ? 'line-through text-toss-text-tertiary' : 'text-toss-blue'}`}>₩{formatKRW(t.amount)}</p>
+                          <p className="text-[10px] text-toss-blue/60">{isDone ? '정산 완료 ✓' : '송금하기'}</p>
+                        </div>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => toggleTransferComplete(t.from, t.to, t.amount)}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg shrink-0 transition-colors ${isDone ? 'bg-toss-success text-white border border-toss-success' : 'bg-white border border-toss-border text-toss-text-secondary hover:bg-toss-bg'}`}
+                        >
+                          {isDone ? '완료됨' : '완료 처리'}
+                        </motion.button>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[15px] sm:text-[16px] font-extrabold text-toss-blue tabular-nums">₩{formatKRW(t.amount)}</p>
-                      <p className="text-[10px] text-toss-blue/60">송금하기</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
 
               {settlements.transfers.length === 0 && (
                 <div className="flex flex-col items-center py-12 bg-white rounded-2xl border border-toss-border/60">
@@ -397,78 +491,124 @@ export default function SettlePage({ members, expenses = [], nickname }) {
 
             {totalToPay > 0 ? (
               <div className="space-y-5">
-                <div className="flex items-center gap-4 bg-red-50 p-4 rounded-2xl">
-                  <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm shadow-red-200">
-                    <ArrowUpRight className="w-6 h-6 stroke-[3]" />
+                <div className="flex items-center gap-4 bg-red-50/70 p-4 rounded-2xl border border-red-100/30">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${pendingToPay === 0 ? 'bg-emerald-500 shadow-emerald-200' : 'bg-red-500 shadow-red-200'}`}>
+                    {pendingToPay === 0 ? <Smile className="w-6 h-6 stroke-[3]" /> : <ArrowUpRight className="w-6 h-6 stroke-[3]" />}
                   </div>
                   <div>
-                    <p className="text-[13px] font-bold text-red-500">내가 보내야 할 총 금액</p>
-                    <p className="text-[24px] font-black text-red-600 tabular-nums">₩{formatKRW(totalToPay)}</p>
+                    <p className="text-[13px] font-bold text-slate-500">내가 보내야 할 총 금액</p>
+                    <p className="text-[22px] font-black text-slate-800 tabular-nums">
+                      ₩{formatKRW(totalToPay)}
+                      {pendingToPay === 0 ? (
+                        <span className="text-[11px] text-emerald-600 font-extrabold bg-emerald-100 px-2 py-0.5 rounded-lg ml-2 inline-block align-middle">
+                          송금 완료! 🎉
+                        </span>
+                      ) : pendingToPay !== totalToPay ? (
+                        <span className="text-[11px] text-slate-400 font-bold block mt-0.5">
+                          남은 송금액: <strong className="text-red-500 font-black">₩{formatKRW(pendingToPay)}</strong>
+                        </span>
+                      ) : null}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <p className="text-[12px] font-extrabold text-slate-400 uppercase tracking-wide px-1">송금 대상 목록</p>
                   <div className="space-y-2.5">
-                    {myTransfers.toPay.map((t, idx) => (
-                      <div key={idx} className="bg-slate-50 border border-slate-100/60 p-4 rounded-2xl flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.to)} flex items-center justify-center font-bold text-white text-[13px] shadow-sm`}>
-                              {t.to.charAt(0)}
+                    {myTransfers.toPay.map((t, idx) => {
+                      const isDone = isTransferComplete(t.from, t.to, t.amount);
+                      return (
+                        <div key={idx} className={`bg-slate-50 border border-slate-100/60 p-4 rounded-2xl flex flex-col gap-3 transition-all duration-200 ${isDone ? 'opacity-50 bg-green-50/20' : ''}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.to)} flex items-center justify-center font-bold text-white text-[13px] shadow-sm`}>
+                                {t.to.charAt(0)}
+                              </div>
+                              <span className="text-[14px] text-slate-700 font-bold">
+                                <strong className="text-[#2563eb] font-extrabold">{t.to}</strong> 님에게
+                              </span>
                             </div>
-                            <span className="text-[14px] text-slate-700 font-bold">
-                              <strong className="text-[#2563eb] font-extrabold">{t.to}</strong> 님에게
+                            <span className={`text-[16px] font-black text-slate-800 tabular-nums ${isDone ? 'line-through text-slate-400' : ''}`}>
+                              ₩{formatKRW(t.amount)}
                             </span>
                           </div>
-                          <span className="text-[16px] font-black text-slate-800 tabular-nums">
-                            ₩{formatKRW(t.amount)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {!isDone && (
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleCopyAmount(t.amount, t.to)}
+                                className="flex-1 py-2 bg-white border border-slate-200 text-[12px] font-extrabold rounded-xl text-slate-600 hover:bg-slate-100 active:bg-slate-100 flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                              >
+                                <span>금액 복사</span>
+                              </motion.button>
+                            )}
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => toggleTransferComplete(t.from, t.to, t.amount)}
+                              className={`flex-1 py-2 text-[12px] font-extrabold rounded-xl flex items-center justify-center transition-all shadow-sm ${isDone ? 'bg-emerald-500 text-white' : 'bg-[#2563eb] text-white'}`}
+                            >
+                              <span>{isDone ? '보냄 완료 ✓' : '보냄 처리'}</span>
+                            </motion.button>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-end">
-                          <motion.button
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleCopyAmount(t.amount, t.to)}
-                            className="w-full py-2 bg-white border border-slate-200 text-[12px] font-extrabold rounded-xl text-slate-600 hover:bg-slate-100 active:bg-slate-100 flex items-center justify-center gap-1.5 shadow-sm transition-all"
-                          >
-                            <span>₩ {formatKRW(t.amount)}원 복사하기</span>
-                          </motion.button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             ) : totalToReceive > 0 ? (
               <div className="space-y-5">
-                <div className="flex items-center gap-4 bg-emerald-50 p-4 rounded-2xl">
-                  <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm shadow-emerald-200">
-                    <ArrowDownLeft className="w-6 h-6 stroke-[3]" />
+                <div className="flex items-center gap-4 bg-emerald-50 p-4 rounded-2xl border border-emerald-100/30">
+                  <div className={`w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm shadow-emerald-200`}>
+                    {pendingToReceive === 0 ? <Smile className="w-6 h-6 stroke-[3]" /> : <ArrowDownLeft className="w-6 h-6 stroke-[3]" />}
                   </div>
                   <div>
                     <p className="text-[13px] font-bold text-emerald-600">내가 받아야 할 총 금액</p>
-                    <p className="text-[24px] font-black text-emerald-700 tabular-nums">₩{formatKRW(totalToReceive)}</p>
+                    <p className="text-[22px] font-black text-slate-800 tabular-nums">
+                      ₩{formatKRW(totalToReceive)}
+                      {pendingToReceive === 0 ? (
+                        <span className="text-[11px] text-emerald-600 font-extrabold bg-emerald-100 px-2 py-0.5 rounded-lg ml-2 inline-block align-middle">
+                          수령 완료! 🎉
+                        </span>
+                      ) : pendingToReceive !== totalToReceive ? (
+                        <span className="text-[11px] text-slate-400 font-bold block mt-0.5">
+                          남은 미수금: <strong className="text-emerald-600 font-black">₩{formatKRW(pendingToReceive)}</strong>
+                        </span>
+                      ) : null}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <p className="text-[12px] font-extrabold text-slate-400 uppercase tracking-wide px-1">입금 대기 목록</p>
                   <div className="space-y-2.5">
-                    {myTransfers.toReceive.map((t, idx) => (
-                      <div key={idx} className="bg-slate-50 border border-slate-100/60 p-4 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.from)} flex items-center justify-center font-bold text-white text-[13px] shadow-sm`}>
-                            {t.from.charAt(0)}
+                    {myTransfers.toReceive.map((t, idx) => {
+                      const isDone = isTransferComplete(t.from, t.to, t.amount);
+                      return (
+                        <div key={idx} className={`bg-slate-50 border border-slate-100/60 p-4 rounded-2xl flex items-center justify-between transition-all duration-200 ${isDone ? 'opacity-50 bg-green-50/20' : ''}`}>
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.from)} flex items-center justify-center font-bold text-white text-[13px] shadow-sm`}>
+                              {t.from.charAt(0)}
+                            </div>
+                            <span className="text-[14px] text-slate-700 font-bold">
+                              <strong className="text-emerald-600 font-extrabold">{t.from}</strong> 님이 나에게
+                            </span>
                           </div>
-                          <span className="text-[14px] text-slate-700 font-bold">
-                            <strong className="text-emerald-600 font-extrabold">{t.from}</strong> 님이 나에게
-                          </span>
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <span className={`text-[15px] font-black text-slate-800 tabular-nums ${isDone ? 'line-through text-slate-400' : ''}`}>
+                              ₩{formatKRW(t.amount)}
+                            </span>
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => toggleTransferComplete(t.from, t.to, t.amount)}
+                              className={`px-3 py-1.5 text-[11px] font-extrabold rounded-xl transition-all shadow-sm ${isDone ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600 border border-emerald-250/20'}`}
+                            >
+                              {isDone ? '받음 ✓' : '받음 처리'}
+                            </motion.button>
+                          </div>
                         </div>
-                        <span className="text-[16px] font-black text-emerald-600 tabular-nums">
-                          ₩{formatKRW(t.amount)}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -570,43 +710,59 @@ export default function SettlePage({ members, expenses = [], nickname }) {
           </div>
 
           <div className="space-y-3">
-            {settlements.transfers.map((t, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.from)} flex items-center justify-center font-bold text-white text-[12px] shadow-sm`}>
-                        {t.from.charAt(0)}
+            {settlements.transfers.map((t, i) => {
+              const isDone = isTransferComplete(t.from, t.to, t.amount);
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className={`bg-white rounded-3xl p-5 shadow-sm border transition-all duration-200 ${isDone ? 'opacity-50 bg-emerald-50/10 border-emerald-200/50' : 'border-slate-100'}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.from)} flex items-center justify-center font-bold text-white text-[12px] shadow-sm`}>
+                          {t.from.charAt(0)}
+                        </div>
+                        <span className={`text-[13px] font-bold text-slate-800 truncate max-w-[60px] ${isDone ? 'line-through text-slate-400' : ''}`}>{t.from}</span>
                       </div>
-                      <span className="text-[13px] font-bold text-slate-800">{t.from}</span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-300 stroke-[2.5]" />
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.to)} flex items-center justify-center font-bold text-white text-[12px] shadow-sm`}>
-                        {t.to.charAt(0)}
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-300 stroke-[2.5] shrink-0" />
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getGradientForName(t.to)} flex items-center justify-center font-bold text-white text-[12px] shadow-sm`}>
+                          {t.to.charAt(0)}
+                        </div>
+                        <span className={`text-[13px] font-bold text-slate-800 truncate max-w-[60px] ${isDone ? 'line-through text-slate-400' : ''}`}>{t.to}</span>
                       </div>
-                      <span className="text-[13px] font-bold text-slate-800">{t.to}</span>
                     </div>
-                  </div>
 
-                  <div className="text-right">
-                    <p className="text-[16px] font-black text-[#2563eb] tabular-nums">₩{formatKRW(t.amount)}</p>
-                    <button
-                      onClick={() => handleCopyAmount(t.amount, t.to)}
-                      className="text-[10px] font-extrabold text-slate-400 mt-1 hover:text-[#2563eb] active:text-[#2563eb] bg-slate-50 px-2 py-0.5 rounded border border-slate-100 transition-colors"
-                    >
-                      송금 복사
-                    </button>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <p className={`text-[15px] font-black tabular-nums ${isDone ? 'line-through text-slate-400' : 'text-[#2563eb]'}`}>₩{formatKRW(t.amount)}</p>
+                        <div className="flex justify-end gap-1.5 mt-1">
+                          {!isDone && (
+                            <button
+                              onClick={() => handleCopyAmount(t.amount, t.to)}
+                              className="text-[10px] font-extrabold text-slate-400 hover:text-[#2563eb] active:text-[#2563eb] bg-slate-50 px-2 py-0.5 rounded border border-slate-100 transition-colors"
+                            >
+                              복사
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => toggleTransferComplete(t.from, t.to, t.amount)}
+                        className={`px-3 py-1.5 text-[11px] font-extrabold rounded-xl transition-all shadow-sm shrink-0 ${isDone ? 'bg-emerald-500 text-white border border-emerald-500' : 'bg-slate-100 text-slate-600 border border-slate-200/60 hover:bg-slate-200'}`}
+                      >
+                        {isDone ? '완료 ✓' : '완료 처리'}
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
 
             {settlements.transfers.length === 0 && (
               <div className="flex flex-col items-center py-12 bg-white rounded-3xl border border-slate-100/80 shadow-sm text-center">
