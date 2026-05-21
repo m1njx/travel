@@ -4,7 +4,8 @@ import {
   Calendar, Wallet, Backpack, Sparkles, CheckCircle2, Circle, 
   ChevronRight, TrendingUp, AlertCircle, RefreshCw, Compass, ArrowRight,
   Plus, Edit2, Check, X,
-  Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle
+  Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
+  Wind, Droplets
 } from 'lucide-react';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
@@ -94,6 +95,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState(null);
+  const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
 
   // Fetch local weather based on geolocation
   useEffect(() => {
@@ -126,13 +128,57 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           console.warn('Reverse geocoding failed, using default name', err);
         }
 
-        // 2. Fetch current weather from Open-Meteo
+        // 2. Fetch current & hourly weather from Open-Meteo
         const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,precipitation_probability,weathercode,windspeed_10m&timezone=auto`
         );
         if (!weatherRes.ok) throw new Error('날씨 데이터를 가져올 수 없습니다.');
         const weatherData = await weatherRes.json();
         const current = weatherData.current_weather;
+        const hourlyData = weatherData.hourly;
+
+        // Process hourly forecast (next 24 hours)
+        let hourlyForecasts = [];
+        if (hourlyData && hourlyData.time) {
+          const now = new Date();
+          const currentHourTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).getTime();
+
+          hourlyForecasts = hourlyData.time
+            .map((timeStr, idx) => {
+              const timeDate = new Date(timeStr);
+              return {
+                timestamp: timeDate.getTime(),
+                timeStr,
+                temp: Math.round(hourlyData.temperature_2m[idx] * 10) / 10,
+                rainProb: hourlyData.precipitation_probability[idx],
+                code: hourlyData.weathercode[idx],
+                // Convert wind speed to m/s (from km/h)
+                windSpeed: Math.round((hourlyData.windspeed_10m[idx] / 3.6) * 10) / 10
+              };
+            })
+            .filter(item => item.timestamp >= currentHourTimestamp)
+            .slice(0, 24)
+            .map(item => {
+              const itemDate = new Date(item.timestamp);
+              const hour = itemDate.getHours();
+              const isNextDay = itemDate.getDate() !== now.getDate();
+              
+              const ampm = hour >= 12 ? '오후' : '오전';
+              const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+              const dayPrefix = isNextDay ? '내일 ' : '';
+              const formattedTime = `${dayPrefix}${ampm} ${displayHour}시`;
+              
+              const details = getWeatherDetails(item.code);
+              return {
+                ...item,
+                formattedTime,
+                label: details.label,
+                icon: details.icon,
+                color: details.color,
+                bg: details.bg
+              };
+            });
+        }
         
         if (isMounted) {
           const details = getWeatherDetails(current.weathercode);
@@ -143,7 +189,11 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             icon: details.icon,
             color: details.color,
             bg: details.bg,
-            cityName
+            cityName,
+            // Convert wind speed to m/s (from km/h)
+            windSpeed: Math.round((current.windspeed / 3.6) * 10) / 10,
+            rainProb: hourlyForecasts.length > 0 ? hourlyForecasts[0].rainProb : 0,
+            hourly: hourlyForecasts
           });
           setWeatherError(null);
           setWeatherLoading(false);
@@ -348,9 +398,10 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             </div>
           ) : weather ? (
             <motion.div 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2.5 px-3.5 py-2 bg-white/80 backdrop-blur-lg border border-toss-border/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200"
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsWeatherModalOpen(true)}
+              className="flex items-center gap-2.5 px-3.5 py-2 bg-white/80 backdrop-blur-lg border border-toss-border/50 rounded-2xl shadow-sm hover:shadow-md hover:border-toss-blue/30 cursor-pointer transition-all duration-200"
             >
               <div className={`p-1.5 rounded-xl ${weather.bg}`}>
                 <weather.icon 
@@ -681,6 +732,146 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           </div>
         </motion.div>
       </div>
+
+      {/* Hourly Weather Details Popover Modal */}
+      <AnimatePresence>
+        {isWeatherModalOpen && weather && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/55 backdrop-blur-md"
+            onClick={() => setIsWeatherModalOpen(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 15 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 210 }}
+              className="w-full max-w-md bg-white/90 backdrop-blur-xl border border-toss-border/60 rounded-3xl shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col text-toss-text-primary"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-toss-border/50 pb-4 mb-4 shrink-0">
+                <div>
+                  <h3 className="text-[17px] font-extrabold tracking-tight flex items-center gap-1.5">
+                    <span>📍</span> {weather.cityName} 실시간 예보
+                  </h3>
+                  <p className="text-[10.5px] text-toss-text-secondary mt-0.5">
+                    기상 지표 및 시간대별 날씨
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsWeatherModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-toss-bg hover:bg-toss-border/40 flex items-center justify-center text-toss-text-secondary transition-colors btn-icon-sm"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto space-y-5 pr-0.5 scrollbar-none">
+                {/* Current Weather Card */}
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-toss-blue/5 to-indigo-500/5 border border-toss-blue/10 p-4.5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10.5px] font-bold text-toss-blue uppercase tracking-wider">현재 날씨</p>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-[34px] font-extrabold text-toss-text-primary tabular-nums leading-none">{weather.temp}°C</span>
+                      <span className="text-[12px] font-bold text-toss-text-secondary">기온</span>
+                    </div>
+                    <p className="text-[13px] font-extrabold text-toss-text-primary mt-1.5">{weather.label}</p>
+                  </div>
+                  
+                  <div className={`p-3.5 rounded-2xl ${weather.bg} shrink-0`}>
+                    <weather.icon 
+                      className={`w-12 h-12 ${weather.color} ${weather.code === 0 ? 'animate-spin' : ''}`}
+                      style={weather.code === 0 ? { animationDuration: '12s' } : undefined}
+                    />
+                  </div>
+                </div>
+
+                {/* Wind and Rain Probability Grid */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* Rain Probability Card */}
+                  <div className="bg-toss-bg/40 border border-toss-border/30 p-3.5 rounded-2xl flex items-center gap-3">
+                    <div className="w-9 h-9 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center text-toss-blue shrink-0">
+                      <Droplets className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <p className="text-[9.5px] font-bold text-toss-text-secondary leading-none">강수 확률</p>
+                      <p className="text-[15px] font-extrabold text-toss-text-primary mt-1.5 tabular-nums leading-none">
+                        {weather.rainProb}%
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Wind Speed Card */}
+                  <div className="bg-toss-bg/40 border border-toss-border/30 p-3.5 rounded-2xl flex items-center gap-3">
+                    <div className="w-9 h-9 bg-teal-50 border border-teal-100 rounded-xl flex items-center justify-center text-teal-600 shrink-0">
+                      <Wind className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <p className="text-[9.5px] font-bold text-toss-text-secondary leading-none">바람 풍속</p>
+                      <p className="text-[15px] font-extrabold text-toss-text-primary mt-1.5 tabular-nums leading-none">
+                        {weather.windSpeed} m/s
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hourly Slider list */}
+                {weather.hourly && weather.hourly.length > 0 && (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[12px] font-extrabold text-toss-text-primary flex items-center gap-1">
+                        <span>🕒</span> 시간별 예보 (24시간)
+                      </h4>
+                      <span className="text-[9px] font-bold text-toss-text-tertiary">
+                        좌우 스크롤 ↔️
+                      </span>
+                    </div>
+
+                    <div className="flex overflow-x-auto gap-2.5 pb-1.5 scrollbar-none snap-x snap-mandatory">
+                      {weather.hourly.map((h, idx) => (
+                        <div 
+                          key={idx}
+                          className="flex-shrink-0 w-[78px] bg-toss-bg/20 border border-toss-border/20 rounded-2xl p-2.5 flex flex-col items-center justify-between text-center snap-start"
+                        >
+                          <span className="text-[9px] font-bold text-toss-text-secondary whitespace-nowrap">
+                            {h.formattedTime}
+                          </span>
+                          
+                          <div className={`p-1.5 rounded-xl ${h.bg} my-1.5`}>
+                            <h.icon className={`w-4.5 h-4.5 ${h.color}`} />
+                          </div>
+
+                          <div className="space-y-0.5">
+                            <p className="text-[11.5px] font-extrabold text-toss-text-primary tabular-nums leading-none">
+                              {h.temp}°
+                            </p>
+                            <p className="text-[8.5px] font-bold text-toss-blue leading-none pt-0.5">
+                              ☔ {h.rainProb}%
+                            </p>
+                            <p className="text-[8px] font-medium text-toss-text-tertiary leading-none">
+                              💨 {h.windSpeed}m
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-toss-border/40 pt-3.5 mt-4 shrink-0 flex items-center justify-between text-[9px] text-toss-text-tertiary">
+                <span>데이터 제공: Open-Meteo</span>
+                <span>TripSync Weather</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
