@@ -287,3 +287,99 @@ export async function getAITravelTip(schedules, checklists, expenses, apiKey) {
 
   throw lastError || new Error('All Gemini models failed to generate travel tips.');
 }
+
+/**
+ * Search the web for live, real-time exchange rates using Gemini API Google Search Grounding tool
+ */
+export async function getLiveRatesWithGemini(apiKey) {
+  if (!apiKey) {
+    throw new Error('API key가 없습니다. 설정 페이지에서 Gemini API key를 등록해주세요.');
+  }
+
+  const prompt = `
+Search the web for the absolute latest, live, real-time exchange rates of the following currencies to Korean Won (KRW) right now (as of today):
+Currencies to search: EUR, GBP, CHF, CZK, USD, SEK, NOK, DKK, PLN, HUF.
+Please find the current value of 1 unit of each currency in South Korean Won (KRW). For example, 1 EUR to KRW, 1 USD to KRW, etc.
+
+You must respond with a single valid JSON object containing:
+1. "rates": An object where keys are the currency codes (EUR, GBP, CHF, CZK, USD, SEK, NOK, DKK, PLN, HUF) and values are numbers representing the KRW value (e.g. EUR: 1515.5, USD: 1380.2).
+2. "lastUpdated": The exact time or date of the rates you found, as a ISO string or human readable string (e.g., "2026-05-21 21:00").
+
+Example response format:
+{
+  "rates": {
+    "EUR": 1515.2,
+    "GBP": 1785.4,
+    "CHF": 1572.0,
+    "CZK": 60.1,
+    "USD": 1378.5,
+    "SEK": 128.4,
+    "NOK": 126.2,
+    "DKK": 202.8,
+    "PLN": 350.5,
+    "HUF": 3.75
+  },
+  "lastUpdated": "2026-05-21 21:00"
+}
+`;
+
+  let lastError = null;
+
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const model = GEMINI_MODELS[i];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ googleSearch: {} }], // Enable Search Grounding!
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      if (response.status === 404 || response.status === 400) {
+        lastError = new Error(`Model ${model} returned ${response.status}`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errText = await response.text();
+        lastError = new Error(`HTTP Error ${response.status}: ${errText}`);
+        continue;
+      }
+
+      const result = await response.json();
+      const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (textResponse) {
+        const cleanedText = textResponse.trim().replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        const parsed = JSON.parse(cleanedText);
+        
+        let parsedTime = Date.now();
+        if (parsed.lastUpdated) {
+          const d = new Date(parsed.lastUpdated);
+          if (!isNaN(d.getTime())) {
+            parsedTime = d.getTime();
+          }
+        }
+
+        return {
+          rates: parsed.rates,
+          lastUpdated: parsedTime,
+          source: 'Gemini 실시간 검색 환율'
+        };
+      }
+    } catch (error) {
+      console.error(`Gemini rate search with ${model} failed:`, error);
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Gemini API 실시간 환율 검색에 실패했습니다.');
+}

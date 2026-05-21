@@ -1012,13 +1012,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                       <p className="text-[12.5px] text-toss-text-tertiary italic mt-0.5">등록된 장소가 없습니다.</p>
                     )}
 
-                    <div className="flex items-center gap-3 border-t border-toss-border/30 pt-2.5 mt-1 text-[11px] text-toss-text-tertiary font-semibold">
-                      <span className="flex items-center gap-0.5">
-                        📎 첨부 {schedule.places?.length || 0}
-                      </span>
-                      <span>•</span>
-                      <span>👁️ {(950 - idx * 125).toLocaleString()}회</span>
-                    </div>
+                    {/* Removed attachment count and view counts indicators */}
                   </div>
                 );
               })

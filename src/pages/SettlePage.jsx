@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { Users, ArrowRight, BarChart3, Receipt, CheckCircle, ArrowUpRight, ArrowDownLeft, Smile } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, ArrowRight, BarChart3, Receipt, CheckCircle, ArrowUpRight, ArrowDownLeft, Smile, X } from 'lucide-react';
 import { convertToKRW, formatKRW } from '../utils/exchangeRate';
 import { fetchExchangeRates } from '../utils/exchangeRate';
 
 export default function SettlePage({ members, expenses = [], nickname }) {
   const [currentRates, setCurrentRates] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   useEffect(() => {
     fetchExchangeRates().then(r => setCurrentRates(r.rates));
@@ -141,6 +142,37 @@ export default function SettlePage({ members, expenses = [], nickname }) {
     }
   }, [nickname]);
 
+  // Compute breakdown details for the selected team member
+  const selectedMemberDetails = useMemo(() => {
+    if (!selectedMember) return null;
+    
+    // Find all expenses paid by this member
+    const paidList = expenses.filter(e => e.paidBy === selectedMember).map(e => {
+      const expRate = e.rateSnapshot || currentRates;
+      const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
+      return { ...e, krw };
+    });
+
+    // Find all expenses split with this member
+    const sharedList = expenses.filter(e => {
+      const targets = e.splitWith || members;
+      return targets.includes(selectedMember);
+    }).map(e => {
+      const expRate = e.rateSnapshot || currentRates;
+      const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
+      const targets = e.splitWith || members;
+      const count = targets.length;
+      const shareKrw = count > 0 ? krw / count : 0;
+      const shareAmount = count > 0 ? e.amount / count : 0;
+      return { ...e, krw, count, shareKrw, shareAmount };
+    });
+
+    const stats = settlements.memberStats[selectedMember] || { paid: 0, actual: 0 };
+    const bal = settlements.balances[selectedMember] || 0;
+
+    return { paidList, sharedList, stats, bal };
+  }, [selectedMember, expenses, members, currentRates, settlements]);
+
   return (
     <>
       {/* 🖥️ Desktop Viewport (100% Unchanged) */}
@@ -257,8 +289,16 @@ export default function SettlePage({ members, expenses = [], nickname }) {
                 const bal = (settlements.balances[m] || 0);
                 const isPositive = bal >= 0;
                 return (
-                  <motion.div key={m} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                    className="toss-card border border-toss-border/40">
+                  <motion.div
+                    key={m}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    whileHover={{ scale: 1.012 }}
+                    whileTap={{ scale: 0.988 }}
+                    onClick={() => setSelectedMember(m)}
+                    className="toss-card border border-toss-border/40 cursor-pointer hover:bg-slate-50 transition-colors duration-150"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-left">
                         <div className="w-8 h-8 bg-toss-blue-light rounded-full flex items-center justify-center font-bold text-toss-blue text-[13px]">{m.charAt(0)}</div>
@@ -485,7 +525,9 @@ export default function SettlePage({ members, expenses = [], nickname }) {
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center justify-between"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setSelectedMember(m)}
+                  className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center justify-between cursor-pointer active:bg-slate-50 transition-colors duration-150"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full bg-gradient-to-tr ${getGradientForName(m)} flex items-center justify-center font-bold text-white text-[14px] shadow-sm`}>
@@ -578,6 +620,154 @@ export default function SettlePage({ members, expenses = [], nickname }) {
           </div>
         </div>
       </div>
+
+      {/* Selected Member Details Breakdown Modal (Toss Style) */}
+      <AnimatePresence>
+        {selectedMember && selectedMemberDetails && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={() => setSelectedMember(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col border border-slate-100 text-slate-800"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-full bg-gradient-to-tr ${getGradientForName(selectedMember)} flex items-center justify-center font-bold text-white text-[13px] shadow-sm`}>
+                    {selectedMember.charAt(0)}
+                  </div>
+                  <div>
+                    <h2 className="text-[17px] font-black text-slate-800">{selectedMember}님의 정산 증빙</h2>
+                    <p className="text-[11.5px] text-slate-400 font-bold mt-0.5">금액 계산 산출 근거 표기</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedMember(null)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-5 h-5 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Overview Summary */}
+              <div className="my-4 bg-slate-50 border border-slate-100 p-4.5 rounded-2xl">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="flex flex-col gap-0.5 border-r border-slate-200/60">
+                    <span className="text-[11px] font-bold text-slate-400">총 결제한 돈</span>
+                    <span className="text-[14.5px] font-extrabold text-slate-800 tabular-nums">
+                      ₩{formatKRW(selectedMemberDetails.stats.paid)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 border-r border-slate-200/60">
+                    <span className="text-[11px] font-bold text-slate-400">총 소비한 돈</span>
+                    <span className="text-[14.5px] font-extrabold text-[#2563eb] tabular-nums">
+                      ₩{formatKRW(selectedMemberDetails.stats.actual)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] font-bold text-slate-400">최종 정산 결과</span>
+                    <span className={`text-[14.5px] font-black tabular-nums ${selectedMemberDetails.bal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {selectedMemberDetails.bal >= 0 ? '+' : ''}₩{formatKRW(selectedMemberDetails.bal)}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3.5 pt-3 border-t border-slate-200/40 text-center">
+                  <p className="text-[12px] font-bold text-slate-500">
+                    설명: 이 멤버는 공동 경비로 <strong className="text-slate-700">₩{formatKRW(selectedMemberDetails.stats.paid)}원</strong>을 결제하고, 본인이 참여한 항목에서 <strong className="text-[#2563eb]">₩{formatKRW(selectedMemberDetails.stats.actual)}원</strong>어치를 소비하여, 최종적으로 <strong className={selectedMemberDetails.bal >= 0 ? 'text-emerald-600' : 'text-red-500'}>{selectedMemberDetails.bal >= 0 ? `₩${formatKRW(selectedMemberDetails.bal)}원을 돌려받아야` : `₩${formatKRW(Math.abs(selectedMemberDetails.bal))}원을 보내야`}</strong> 합니다.
+                  </p>
+                </div>
+              </div>
+
+              {/* Scrollable details list */}
+              <div className="flex-1 overflow-y-auto space-y-5 pr-1 text-left">
+                {/* 1. Paid by this member */}
+                <div className="space-y-2.5">
+                  <h3 className="text-[13px] font-extrabold text-slate-700 flex items-center gap-1.5 px-0.5">
+                    <span className="text-emerald-600">💵</span> {selectedMember}님이 결제한 내역 ({selectedMemberDetails.paidList.length}건)
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedMemberDetails.paidList.map((e, idx) => (
+                      <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-3.5 shadow-sm flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[13.5px] font-extrabold text-slate-800 break-all">{e.description}</span>
+                          <span className="text-[14px] font-extrabold text-slate-800 tabular-nums">
+                            ₩{formatKRW(e.krw)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold">
+                          <span>
+                            {new Date(e.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                            {e.currency && e.currency !== 'KRW' && ` · ${e.currency} ${e.amount.toLocaleString()}`}
+                          </span>
+                          <span className="text-slate-500">
+                            지출 대상: {e.splitWith && e.splitWith.length > 0 ? `${e.splitWith.length}명 (${e.splitWith.join(', ')})` : '전원'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedMemberDetails.paidList.length === 0 && (
+                      <p className="text-[12px] text-slate-400 italic text-center py-4 bg-slate-50 rounded-2xl border border-slate-150/40">결제한 내역이 없습니다.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Shared/Consumed by this member */}
+                <div className="space-y-2.5 pb-2">
+                  <h3 className="text-[13px] font-extrabold text-slate-700 flex items-center gap-1.5 px-0.5">
+                    <span className="text-[#2563eb]">🍽️</span> {selectedMember}님이 함께 참여한 소비 내역 ({selectedMemberDetails.sharedList.length}건)
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedMemberDetails.sharedList.map((e, idx) => (
+                      <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-3.5 shadow-sm flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[13.5px] font-extrabold text-slate-800 break-all">{e.description}</span>
+                          <div className="text-right">
+                            <span className="text-[14px] font-extrabold text-[#2563eb] tabular-nums">
+                              ₩{formatKRW(e.shareKrw)}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-bold block mt-0.5">본인 개별 몫 (1/{e.count})</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold">
+                          <span>
+                            {new Date(e.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                            {` · 결제자: ${e.paidBy}`}
+                          </span>
+                          <span className="text-slate-500">
+                            총액: ₩{formatKRW(e.krw)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedMemberDetails.sharedList.length === 0 && (
+                      <p className="text-[12px] text-slate-400 italic text-center py-4 bg-slate-50 rounded-2xl border border-slate-150/40">참여한 소비 내역이 없습니다.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Close Footer button */}
+              <div className="pt-3 border-t border-slate-100 flex gap-2">
+                <button
+                  onClick={() => setSelectedMember(null)}
+                  className="w-full py-3 bg-slate-100 text-slate-700 font-extrabold rounded-2xl text-[14px] hover:bg-slate-200 transition-colors"
+                >
+                  확인
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
