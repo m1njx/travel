@@ -1112,10 +1112,10 @@ function ScheduleModal({ schedule, onSave, onClose }) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-0 md:p-4" onClick={onClose}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 z-[100] flex items-end md:items-center justify-center p-0 md:p-4" onClick={onClose}>
       <motion.div initial={{ y: '100%', scale: 1 }} animate={{ y: 0, scale: 1 }} exit={{ y: '100%', scale: 0.95 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         onClick={e => e.stopPropagation()} 
-        className="w-full max-w-lg bg-white rounded-t-3xl md:rounded-3xl p-4 sm:p-5 md:p-8 safe-bottom modal-sheet md:my-auto max-h-[72dvh] md:max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-lg bg-white rounded-t-3xl md:rounded-3xl p-4 pb-8 sm:p-5 sm:pb-10 md:p-8 safe-bottom modal-sheet md:my-auto max-h-[72dvh] md:max-h-[85vh] overflow-y-auto"
       >
         <div className="w-10 h-1 bg-toss-border rounded-full mx-auto mb-4 md:hidden" />
         
