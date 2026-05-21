@@ -342,21 +342,21 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
         {/* Dynamic Checklist Content */}
         <div className="mx-4 space-y-3">
           {/* Add Item Widget */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col gap-3">
-            <div className="flex gap-2">
+          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
+            <div className="flex gap-2 w-full min-w-0">
               <input
                 type="text"
                 placeholder={checklistTab === 'personal' ? '예: 여권, 상비약, 어댑터' : '예: 렌터카 서류, 유심, 라면'}
                 value={newPackName}
                 onChange={e => setNewPackName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAddPack()}
-                className="flex-1 px-4 py-3 bg-slate-50 focus:bg-white border border-transparent focus:border-blue-500/30 rounded-2xl text-[14px] outline-none transition-all font-bold"
+                className="flex-1 min-w-0 px-4 py-3 bg-slate-50 focus:bg-white border border-transparent focus:border-blue-500/30 rounded-2xl text-[14px] outline-none transition-all font-bold"
               />
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAddPack}
                 disabled={!newPackName.trim()}
-                className="px-5 py-3 bg-[#2563eb] text-white text-[14px] font-extrabold rounded-2xl flex items-center gap-1 shadow-md shadow-blue-100 disabled:opacity-40 disabled:shadow-none shrink-0 whitespace-nowrap"
+                className="px-4 py-3 bg-[#2563eb] text-white text-[14px] font-extrabold rounded-2xl flex items-center gap-1 shadow-md shadow-blue-100 disabled:opacity-40 disabled:shadow-none shrink-0 whitespace-nowrap"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" /> 등록
               </motion.button>
