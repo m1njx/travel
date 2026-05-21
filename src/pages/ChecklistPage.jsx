@@ -19,6 +19,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname }) {
       type: checklistTab,
       completed: false,
       assignedTo: checklistTab === 'common' ? (packAssignee || '공통') : nickname,
+      createdBy: nickname,
       createdAt: Date.now(),
     });
     setNewPackName('');
@@ -34,11 +35,16 @@ export default function ChecklistPage({ checklistsSync, members, nickname }) {
   };
 
   const filteredPackList = checklists
-    .filter(item => item.type === checklistTab)
+    .filter(item => {
+      if (item.type === 'personal') {
+        return item.assignedTo === nickname;
+      }
+      return item.type === 'common';
+    })
     .sort((a, b) => b.createdAt - a.createdAt);
 
-  const totalPersonal = checklists.filter(i => i.type === 'personal').length;
-  const donePersonal = checklists.filter(i => i.type === 'personal' && i.completed).length;
+  const totalPersonal = checklists.filter(i => i.type === 'personal' && i.assignedTo === nickname).length;
+  const donePersonal = checklists.filter(i => i.type === 'personal' && i.assignedTo === nickname && i.completed).length;
   const totalCommon = checklists.filter(i => i.type === 'common').length;
   const doneCommon = checklists.filter(i => i.type === 'common' && i.completed).length;
   const totalAll = totalPersonal + totalCommon;
@@ -146,10 +152,19 @@ export default function ChecklistPage({ checklistsSync, members, nickname }) {
                       }`}>
                         {item.name}
                       </span>
-                      {checklistTab === 'common' && item.assignedTo && (
-                        <span className="text-[10px] bg-toss-blue-light text-toss-blue px-1.5 py-0.5 rounded font-semibold mt-0.5 inline-block">
-                          담당: {item.assignedTo}
-                        </span>
+                      {checklistTab === 'common' && (
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {item.assignedTo && (
+                            <span className="text-[10px] bg-toss-blue-light text-toss-blue px-1.5 py-0.5 rounded font-semibold inline-block">
+                              담당: {item.assignedTo}
+                            </span>
+                          )}
+                          {item.createdBy && (
+                            <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-semibold inline-block">
+                              등록: {item.createdBy}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

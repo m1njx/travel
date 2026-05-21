@@ -505,69 +505,71 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           )}
         </motion.div>
 
-        {/* Widget 3: Budget Balance Card */}
+        {/* Widget 3: Weather Card */}
         <motion.div 
           variants={itemVariants}
-          className="toss-card flex flex-col justify-between min-h-[170px]"
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => {
+            if (weather) setIsWeatherModalOpen(true);
+          }}
+          className="toss-card flex flex-col justify-between min-h-[170px] cursor-pointer transition-all duration-200 hover:shadow-md hover:border-toss-blue/30"
         >
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[13px] font-bold text-toss-text-secondary">여행 남은 예산</span>
-              {isEditingBudget ? (
-                <div className="flex items-center gap-1">
-                  <button onClick={handleSaveBudget} className="p-1 text-toss-success hover:bg-toss-bg rounded-md btn-icon-sm">
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => { setBudgetInput(String(totalBudget)); setIsEditingBudget(false); }} className="p-1 text-toss-text-tertiary hover:bg-toss-bg rounded-md btn-icon-sm">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setIsEditingBudget(true)} className="p-1 hover:bg-toss-bg rounded-md text-toss-text-secondary btn-icon-sm">
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-              )}
+          {weatherLoading ? (
+            <div className="flex flex-col items-center justify-center h-full py-6">
+              <RefreshCw className="w-6 h-6 text-toss-blue animate-spin mb-2" />
+              <span className="text-[12px] text-toss-text-secondary font-medium">날씨 불러오는 중...</span>
             </div>
-
-            {isEditingBudget ? (
-              <div className="mt-1">
-                <input 
-                  type="text" 
-                  value={budgetInput} 
-                  onChange={e => setBudgetInput(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-toss-bg rounded-lg text-[13px] font-bold border border-toss-blue outline-none"
-                  autoFocus
-                  placeholder="예산 입력(원)"
-                />
-                <span className="text-[9.5px] text-toss-text-tertiary mt-1 block">원화(KRW) 기준으로 입력해주세요.</span>
+          ) : weatherError ? (
+            <div className="flex flex-col items-center justify-center h-full py-6 text-center">
+              <AlertCircle className="w-6 h-6 text-toss-text-tertiary mb-2" />
+              <span className="text-[12px] text-toss-text-secondary font-medium">
+                {weatherError === '오프라인 상태' ? '날씨 정보 오프라인' : '날씨 정보를 불러오지 못했습니다.'}
+              </span>
+            </div>
+          ) : weather ? (
+            <div className="flex flex-col justify-between h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-bold text-toss-text-secondary flex items-center gap-1.5">
+                  <span>📍</span> {weather.cityName} 날씨
+                </span>
+                <span className="text-[10px] text-toss-blue font-bold bg-toss-blue-light px-2 py-0.5 rounded-full">
+                  실시간 예보
+                </span>
               </div>
-            ) : (
-              <div>
-                <p className={`text-[25px] sm:text-[28px] font-extrabold tracking-tight tabular-nums ${remainingBudget < 0 ? 'text-toss-danger' : 'text-toss-text-primary'}`}>
-                  {remainingBudget < 0 ? `-₩${formatKRW(Math.abs(remainingBudget))}` : `₩${formatKRW(remainingBudget)}`}
-                </p>
-                <div className="flex items-center justify-between text-[10.5px] text-toss-text-secondary mt-1">
-                  <span>총 예산: ₩{formatKRW(totalBudget)}</span>
-                  <span>지출: ₩{formatKRW(totalSpentKRW)}</span>
+
+              {/* Temp and Icon */}
+              <div className="flex items-center justify-between my-2.5">
+                <div>
+                  <p className="text-[30px] font-extrabold text-toss-text-primary tracking-tight tabular-nums leading-none">
+                    {weather.temp}°C
+                  </p>
+                  <p className="text-[12.5px] font-bold text-toss-text-secondary mt-1">
+                    {weather.label}
+                  </p>
+                </div>
+                <div className={`p-2.5 rounded-2xl ${weather.bg} shrink-0`}>
+                  <weather.icon 
+                    className={`w-9 h-9 ${weather.color} ${weather.code === 0 ? 'animate-spin' : ''}`}
+                    style={weather.code === 0 ? { animationDuration: '12s' } : undefined}
+                  />
                 </div>
               </div>
-            )}
 
-            {/* Toss style budget bar */}
-            {!isEditingBudget && (
-              <div className="w-full h-2 bg-toss-bg rounded-full overflow-hidden mt-3">
-                <div 
-                  className={`h-full rounded-full transition-all duration-700 ${budgetProgress > 85 ? 'bg-red-500' : 'bg-toss-blue'}`} 
-                  style={{ width: `${budgetProgress}%` }}
-                />
+              {/* Stats */}
+              <div className="flex items-center justify-between text-[11px] font-medium text-toss-text-secondary border-t border-toss-border/50 pt-2.5">
+                <span className="flex items-center gap-1">
+                  <Droplets className="w-3.5 h-3.5 text-toss-blue" />
+                  강수 {weather.rainProb}%
+                </span>
+                <span className="flex items-center gap-1">
+                  <Wind className="w-3.5 h-3.5 text-teal-500" />
+                  풍속 {weather.windSpeed} m/s
+                </span>
               </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between text-[9.5px] text-toss-text-tertiary border-t border-toss-border/50 pt-2.5 mt-3">
-            <span>실시간 환율 변환 적용 완료</span>
-            {ratesLoading && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
-          </div>
+            </div>
+          ) : null}
         </motion.div>
       </div>
 
