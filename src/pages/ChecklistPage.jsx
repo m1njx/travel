@@ -4,7 +4,7 @@ import { Plus, Trash2, CheckSquare, Square, Backpack, Package, User } from 'luci
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-export default function ChecklistPage({ checklistsSync, members, nickname }) {
+export default function ChecklistPage({ checklistsSync, members, nickname, logAction }) {
   const { items: checklists = [], addItem, updateItem, removeItem } = checklistsSync || { items: [], addItem: () => {}, updateItem: () => {}, removeItem: () => {} };
 
   const [checklistTab, setChecklistTab] = useState('personal');
@@ -13,7 +13,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname }) {
 
   const handleAddPack = async () => {
     if (!newPackName.trim()) return;
-    await addItem({
+    const newItem = {
       id: genId(),
       name: newPackName.trim(),
       type: checklistTab,
@@ -21,7 +21,11 @@ export default function ChecklistPage({ checklistsSync, members, nickname }) {
       assignedTo: checklistTab === 'common' ? (packAssignee || '공통') : nickname,
       createdBy: nickname,
       createdAt: Date.now(),
-    });
+    };
+    await addItem(newItem);
+    if (logAction) {
+      await logAction('add', 'checklists', newItem, nickname);
+    }
     setNewPackName('');
     setPackAssignee('');
   };
@@ -31,7 +35,11 @@ export default function ChecklistPage({ checklistsSync, members, nickname }) {
   };
 
   const handleRemovePack = async (id) => {
+    const itemToDelete = checklists.find(x => x.id === id);
     await removeItem(id);
+    if (logAction && itemToDelete) {
+      await logAction('delete', 'checklists', itemToDelete, nickname);
+    }
   };
 
   const filteredPackList = checklists

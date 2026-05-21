@@ -6,7 +6,7 @@ import { optimizeScheduleWithGemini } from '../utils/gemini';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDate, clearInitialExpandedDate }) {
+export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDate, clearInitialExpandedDate, logAction }) {
   const { items: schedules, addItem, updateItem, removeItem } = sync;
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -41,14 +41,19 @@ export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDat
       formattedUrl = `https://${formattedUrl}`;
     }
     
-    await addItem({
+    const newItem = {
       ...s,
       url: formattedUrl,
       id: genId(),
       places: [],
       createdAt: Date.now(),
       createdBy: nickname
-    });
+    };
+    
+    await addItem(newItem);
+    if (logAction) {
+      await logAction('add', 'schedules', newItem, nickname);
+    }
     setShowAdd(false);
   };
 
@@ -57,12 +62,21 @@ export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDat
     if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
       formattedUrl = `https://${formattedUrl}`;
     }
-    await updateItem({ ...u, url: formattedUrl });
+    const oldItem = schedules.find(x => x.id === u.id);
+    const updatedItem = { ...u, url: formattedUrl };
+    await updateItem(updatedItem);
+    if (logAction) {
+      await logAction('edit', 'schedules', updatedItem, nickname, oldItem);
+    }
     setEditing(null);
   };
 
   const handleDelete = async (id) => {
+    const itemToDelete = schedules.find(x => x.id === id);
     await removeItem(id);
+    if (logAction && itemToDelete) {
+      await logAction('delete', 'schedules', itemToDelete, nickname);
+    }
   };
 
   const addPlace = async (sid, place) => {
@@ -659,11 +673,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
             )}
           </div>
           <h4 className="text-[15px] sm:text-[16px] font-bold text-toss-text-primary">{schedule.title}</h4>
-          {schedule.description && (
-            <p className="text-[12px] sm:text-[13px] text-toss-text-secondary mt-1 line-clamp-2">
-              {schedule.description}
-            </p>
-          )}
+
 
           {/* Reference Link Button if URL exists */}
           {schedule.url && (
@@ -1097,7 +1107,6 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
 function ScheduleModal({ schedule, onSave, onClose }) {
   const [title, setTitle] = useState(schedule?.title || '');
   const [date, setDate] = useState(schedule?.date || '');
-  const [desc, setDesc] = useState(schedule?.description || '');
   const [url, setUrl] = useState(schedule?.url || '');
 
   const save = () => {
@@ -1106,7 +1115,6 @@ function ScheduleModal({ schedule, onSave, onClose }) {
       ...(schedule || {}),
       title: title.trim(),
       date,
-      description: desc.trim(),
       url: url.trim()
     });
   };
@@ -1154,11 +1162,6 @@ function ScheduleModal({ schedule, onSave, onClose }) {
             <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">참고 URL (선택)</label>
             <input type="text" placeholder="예: google.com 또는 https://maps.google.com" value={url} onChange={e => setUrl(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
-          </div>
-          <div>
-            <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">설명 (선택)</label>
-            <textarea placeholder="간단한 설명을 추가하세요" value={desc} onChange={e => setDesc(e.target.value)} rows={2}
-              className="w-full px-3.5 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0 resize-none outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
           </div>
         </div>
       </motion.div>

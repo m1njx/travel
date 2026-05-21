@@ -6,7 +6,7 @@ import { scanReceiptWithGemini } from '../utils/gemini';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-export default function ExpensePage({ members, sync, apiKey }) {
+export default function ExpensePage({ members, sync, apiKey, nickname, logAction }) {
   const { items: expenses, addItem, removeItem } = sync;
   const [rates, setRates] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -24,12 +24,24 @@ export default function ExpensePage({ members, sync, apiKey }) {
   useEffect(() => { loadRates(); }, []);
 
   const handleAdd = async (e) => {
-    await addItem({
+    const newItem = {
       ...e, id: genId(), createdAt: Date.now(),
       rateSnapshot: rates ? { ...rates } : null,
       rateSnapshotTime: lastUpdated || Date.now(),
-    });
+    };
+    await addItem(newItem);
+    if (logAction) {
+      await logAction('add', 'expenses', newItem, nickname);
+    }
     setShowAdd(false);
+  };
+
+  const handleRemove = async (id) => {
+    const itemToDelete = expenses.find(x => x.id === id);
+    await removeItem(id);
+    if (logAction && itemToDelete) {
+      await logAction('delete', 'expenses', itemToDelete, nickname);
+    }
   };
 
   const totalKRW = expenses.reduce((a, e) => {
@@ -125,7 +137,7 @@ export default function ExpensePage({ members, sync, apiKey }) {
                       <p className="text-[13px] sm:text-[14px] font-bold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
                       <p className="text-[10px] sm:text-[11px] text-toss-text-secondary tabular-nums">₩{formatKRW(krw)}</p>
                     </div>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => removeItem(e.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleRemove(e.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
                       <X className="w-3.5 h-3.5 text-toss-text-tertiary" />
                     </motion.button>
                   </div>

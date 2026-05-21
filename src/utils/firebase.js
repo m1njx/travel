@@ -122,3 +122,34 @@ export function generateRoomCode() {
   }
   return code;
 }
+
+/**
+ * Save an activity log entry
+ */
+export async function saveActivityLog(roomCode, logData) {
+  const colRef = getRoomCollection(roomCode, 'activityLogs');
+  if (!colRef) return;
+  const docRef = doc(colRef, logData.id);
+  await setDoc(docRef, logData);
+}
+
+/**
+ * Subscribe to activity logs in real-time
+ */
+export function subscribeToActivityLogs(roomCode, onData) {
+  const colRef = getRoomCollection(roomCode, 'activityLogs');
+  if (!colRef) return () => {};
+
+  const q = query(colRef);
+  return onSnapshot(q, (snapshot) => {
+    const items = [];
+    snapshot.forEach(docSnap => {
+      items.push({ ...docSnap.data(), id: docSnap.id });
+    });
+    // Sort by timestamp descending
+    items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    onData(items);
+  }, (error) => {
+    console.error('Activity logs subscription error:', error);
+  });
+}

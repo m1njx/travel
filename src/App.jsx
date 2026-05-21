@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard } from 'lucide-react';
+import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard, Shield } from 'lucide-react';
 import DashboardPage from './pages/DashboardPage';
 import PlannerPage from './pages/PlannerPage';
 import ExpensePage from './pages/ExpensePage';
@@ -9,9 +9,10 @@ import SettingsPage from './pages/SettingsPage';
 import MemoPage from './pages/MemoPage';
 import ChecklistPage from './pages/ChecklistPage';
 import RoomJoinScreen from './pages/RoomJoinScreen';
+import ActivityLogPage from './pages/ActivityLogPage';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from './utils/storage';
-import { isFirebaseConfigured, saveRoomMeta, getRoomMeta, generateRoomCode } from './utils/firebase';
-import { useSyncedList, useSyncedMeta } from './utils/useSync';
+import { isFirebaseConfigured, saveRoomMeta, getRoomMeta, generateRoomCode, saveActivityLog } from './utils/firebase';
+import { useSyncedList, useSyncedMeta, useActivityLog, useSyncedLogs } from './utils/useSync';
 
 const TABS = [
   { id: 'dashboard', label: '홈', icon: LayoutDashboard },
@@ -54,6 +55,9 @@ export default function App() {
 
   // Members: use Firestore meta if online, otherwise local
   const members = (isOnline && meta?.members) ? meta.members : localMembers;
+  
+  // Derived helper for components that expect string arrays
+  const memberNames = members.map(m => typeof m === 'object' ? m.name : m);
 
   const setMembers = (newMembers) => {
     if (isOnline) {
@@ -80,13 +84,9 @@ export default function App() {
     saveToStorage(STORAGE_KEYS.MEMO, newMemo);
   };
 
-  const handleGenerateInviteCode = async () => {
-    if (isOnline) {
-      const newCode = generateRoomCode();
-      await updateMeta({ inviteCode: newCode });
-      alert(`새 초대 코드가 생성되었습니다: ${newCode}`);
-    }
-  };
+  // Activity logs hooks
+  const { logs } = useSyncedLogs(roomCode);
+  const { logAction } = useActivityLog(roomCode);
 
   // API key (still local per device)
   const [apiKey, setApiKey] = useState(() => {
@@ -112,36 +112,32 @@ export default function App() {
 
     // If offline, set local members
     if (!code) {
-      setLocalMembers([name]);
-      saveToStorage(STORAGE_KEYS.MEMBERS, [name]);
+      const localObj = { name, inviteCode: 'LOCAL' };
+      setLocalMembers([localObj]);
+      saveToStorage(STORAGE_KEYS.MEMBERS, [localObj]);
     }
   };
 
   // Member Login Verification
-  const handleJoinMember = async (name, enteredCode) => {
+  const handleJoinMember = async (enteredCode) => {
     if (!isFirebaseConfigured()) {
-      handleJoinRoom(FIXED_ROOM_CODE, name, false, false);
+      handleJoinRoom(FIXED_ROOM_CODE, 'Guest', false, false);
       return true;
     }
     try {
       const metaData = await getRoomMeta(FIXED_ROOM_CODE);
-      if (!metaData || !metaData.inviteCode) {
-        alert("현재 생성된 활성 초대 코드가 없습니다. 관리자에게 초대 코드 생성을 요청하세요.");
-        return false;
-      }
-      if (metaData.inviteCode.toUpperCase() !== enteredCode.trim().toUpperCase()) {
-        alert("입력한 초대 코드가 올바르지 않습니다.");
-        return false;
-      }
+      const currentMembers = metaData?.members || [];
       
-      // Auto add member to list if not present
-      const currentMembers = metaData.members || [];
-      if (!currentMembers.includes(name.trim())) {
-        const newMembers = [...currentMembers, name.trim()];
-        await saveRoomMeta(FIXED_ROOM_CODE, { members: newMembers });
+      const matched = currentMembers.find(
+        m => typeof m === 'object' && m.inviteCode?.trim().toUpperCase() === enteredCode.trim().toUpperCase()
+      );
+      
+      if (!matched) {
+        alert("입력한 초대 코드와 일치하는 멤버가 없습니다.");
+        return false;
       }
 
-      handleJoinRoom(FIXED_ROOM_CODE, name.trim(), false, false);
+      handleJoinRoom(FIXED_ROOM_CODE, matched.name, false, false);
       return true;
     } catch (err) {
       console.error(err);
@@ -160,20 +156,51 @@ export default function App() {
       try {
         const metaData = await getRoomMeta(FIXED_ROOM_CODE);
         const currentMembers = metaData?.members || [];
-        if (!currentMembers.includes(name.trim())) {
-          const newMembers = [...currentMembers, name.trim()];
-          await saveRoomMeta(FIXED_ROOM_CODE, { 
-            members: newMembers,
-            inviteCode: metaData?.inviteCode || generateRoomCode(),
-            createdAt: metaData?.createdAt || Date.now(),
-            createdBy: metaData?.createdBy || name.trim()
-          });
+        const adminExists = currentMembers.some(
+          m => (typeof m === 'object' ? m.name : m) === name.trim()
+        );
+        if (!adminExists) {
+          const newMembers = [...currentMembers, { name: name.trim(), inviteCode: 'ADMIN' }];
+          await saveRoomMeta(FIXED_ROOM_CODE, { members: newMembers });
         }
       } catch (err) {
         console.error("Admin init error:", err);
       }
     }
     handleJoinRoom(FIXED_ROOM_CODE, name.trim(), true, true);
+    return true;
+  };
+
+  const handleChangeNickname = async (newName) => {
+    const cleanName = newName.trim();
+    if (!cleanName) return false;
+
+    const nameExists = members.some(m => (typeof m === 'object' ? m.name : m) === cleanName);
+    if (nameExists) {
+      alert("이미 사용 중인 이름입니다.");
+      return false;
+    }
+
+    if (isOnline) {
+      try {
+        const newMembers = members.map(m => {
+          const currentName = typeof m === 'object' ? m.name : m;
+          if (currentName === nickname) {
+            return typeof m === 'object' ? { ...m, name: cleanName } : cleanName;
+          }
+          return m;
+        });
+        await updateMeta({ members: newMembers });
+      } catch (err) {
+        console.error("Failed to update nickname in Firestore:", err);
+        alert("이름 변경을 동기화하지 못했습니다. 네트워크 상태를 확인하세요.");
+        return false;
+      }
+    }
+
+    setNickname(cleanName);
+    saveToStorage('tripsync_nickname', cleanName);
+    alert("이름이 변경되었습니다.");
     return true;
   };
 
@@ -197,6 +224,40 @@ export default function App() {
       />
     );
   }
+
+  const handleRestoreLog = async (log) => {
+    if (!isAdmin) return;
+    try {
+      const { collection: collectionName, itemSnapshot } = log;
+      if (collectionName === 'schedules') {
+        await schedulesSync.addItem(itemSnapshot);
+      } else if (collectionName === 'expenses') {
+        await expensesSync.addItem(itemSnapshot);
+      } else if (collectionName === 'checklists') {
+        await checklistsSync.addItem(itemSnapshot);
+      }
+      
+      const updatedLog = { ...log, restored: true };
+      await saveActivityLog(roomCode, updatedLog);
+      alert("성공적으로 복구되었습니다!");
+    } catch (err) {
+      console.error("Failed to restore:", err);
+      alert("복구에 실패했습니다.");
+    }
+  };
+
+  const activeTabs = isAdmin 
+    ? [
+        { id: 'dashboard', label: '홈', icon: LayoutDashboard },
+        { id: 'planner', label: '일정', icon: Calendar },
+        { id: 'expense', label: '가계부', icon: Wallet },
+        { id: 'settle', label: '정산', icon: Users },
+        { id: 'checklist', label: '준비물', icon: Backpack },
+        { id: 'memo', label: '메모', icon: Pin },
+        { id: 'logs', label: '로그', icon: Shield },
+        { id: 'settings', label: '설정', icon: Settings },
+      ]
+    : TABS;
 
   const pageVariants = {
     initial: { opacity: 0, y: 6 },
@@ -232,25 +293,30 @@ export default function App() {
             <div className="p-3.5 bg-toss-bg rounded-2xl space-y-2.5">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] text-toss-text-secondary font-medium">초대 코드</p>
+                  <p className="text-[11px] text-toss-text-secondary font-medium">
+                    {isAdmin ? '접속 역할' : '내 초대 코드'}
+                  </p>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-toss-blue'}`}>
                     {isAdmin ? '👑 관리자' : '👤 일반 멤버'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-1.5">
-                  <span className="text-lg font-bold text-toss-blue tracking-wider font-mono">
-                    {meta?.inviteCode || '------'}
-                  </span>
-                  {isAdmin && isOnline && (
-                    <motion.button 
-                      whileTap={{ scale: 0.9 }}
-                      onClick={handleGenerateInviteCode}
-                      className="text-[9.5px] font-bold bg-toss-blue text-white px-2 py-1 rounded-md shrink-0 hover:bg-toss-blue/90"
-                    >
-                      갱신
-                    </motion.button>
-                  )}
-                </div>
+                {!isAdmin && (
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-lg font-bold text-toss-blue tracking-wider font-mono">
+                      {(() => {
+                        const me = members.find(m => typeof m === 'object' && m.name === nickname);
+                        return me?.inviteCode || '------';
+                      })()}
+                    </span>
+                  </div>
+                )}
+                {isAdmin && (
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-sm font-bold text-indigo-600">
+                      최종 관리자
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between border-t border-toss-border/50 pt-2 text-[11px]">
                 <span className="text-toss-text-tertiary">내 이름: <span className="font-semibold text-toss-text-secondary">{nickname}</span></span>
@@ -263,7 +329,7 @@ export default function App() {
 
           {/* Navigation Links */}
           <nav className="space-y-1">
-            {TABS.map((tab) => {
+            {activeTabs.map((tab) => {
               const isActive = activeTab === tab.id;
               const Icon = tab.icon;
               return (
@@ -309,7 +375,7 @@ export default function App() {
                   schedulesSync={schedulesSync}
                   checklistsSync={checklistsSync}
                   expensesSync={expensesSync}
-                  members={members}
+                  members={memberNames}
                   nickname={nickname}
                   apiKey={apiKey}
                   onNavigateToSchedule={(date) => {
@@ -325,19 +391,38 @@ export default function App() {
                   apiKey={apiKey}
                   initialExpandedDate={initialExpandedDate}
                   clearInitialExpandedDate={() => setInitialExpandedDate(null)}
+                  logAction={logAction}
                 />
               )}
               {activeTab === 'expense' && (
-                <ExpensePage members={members} sync={expensesSync} apiKey={apiKey} />
+                <ExpensePage
+                  members={memberNames}
+                  sync={expensesSync}
+                  apiKey={apiKey}
+                  nickname={nickname}
+                  logAction={logAction}
+                />
               )}
               {activeTab === 'settle' && (
-                <SettlePage members={members} expenses={expensesSync.items} nickname={nickname} />
+                <SettlePage members={memberNames} expenses={expensesSync.items} nickname={nickname} />
               )}
               {activeTab === 'checklist' && (
-                <ChecklistPage checklistsSync={checklistsSync} members={members} nickname={nickname} />
+                <ChecklistPage
+                  checklistsSync={checklistsSync}
+                  members={memberNames}
+                  nickname={nickname}
+                  logAction={logAction}
+                />
               )}
               {activeTab === 'memo' && (
                 <MemoPage memo={memo} updateMemo={updateMemo} nickname={nickname} />
+              )}
+              {activeTab === 'logs' && isAdmin && (
+                <ActivityLogPage
+                  logs={logs}
+                  onRestore={handleRestoreLog}
+                  roomCode={roomCode}
+                />
               )}
               {activeTab === 'settings' && (
                 <SettingsPage
@@ -351,6 +436,7 @@ export default function App() {
                   isOnline={isOnline}
                   onLeave={handleLeaveRoom}
                   isAdmin={isAdmin}
+                  onChangeNickname={handleChangeNickname}
                 />
               )}
             </motion.div>
@@ -361,7 +447,7 @@ export default function App() {
       {/* Mobile Bottom Tab Bar (hidden on desktop) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-toss-border safe-bottom z-50">
         <div className="flex">
-          {TABS.map((tab) => {
+          {activeTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
             return (

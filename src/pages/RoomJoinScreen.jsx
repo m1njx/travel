@@ -11,7 +11,7 @@ export default function RoomJoinScreen({ onJoinMember, onJoinAdmin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nickname.trim()) {
+    if (role === 'admin' && !nickname.trim()) {
       alert('이름을 입력해 주세요.');
       return;
     }
@@ -24,7 +24,7 @@ export default function RoomJoinScreen({ onJoinMember, onJoinAdmin }) {
           setLoading(false);
           return;
         }
-        const success = await onJoinMember(nickname, inviteCode);
+        const success = await onJoinMember(inviteCode);
         if (!success) setLoading(false);
       } else {
         if (!password) {
@@ -99,19 +99,6 @@ export default function RoomJoinScreen({ onJoinMember, onJoinAdmin }) {
                   exit={{ opacity: 0, x: 10 }}
                   className="space-y-4"
                 >
-                  <div>
-                    <label className="text-[12px] font-bold text-toss-text-secondary mb-1.5 block">내 이름</label>
-                    <input
-                      type="text"
-                      placeholder="이름을 입력해 주세요"
-                      value={nickname}
-                      onChange={(e) => setNickname(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-toss-border/80 focus:border-toss-blue rounded-xl text-[14.5px] outline-none transition-all shadow-inner-sm"
-                      maxLength={10}
-                      required
-                    />
-                  </div>
-
                   <div>
                     <label className="text-[12px] font-bold text-toss-text-secondary mb-1.5 block">초대 코드</label>
                     <input
