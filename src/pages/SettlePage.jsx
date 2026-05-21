@@ -239,34 +239,28 @@ export default function SettlePage({ members, expenses = [], nickname }) {
     <div className={desktop
       ? "toss-card border bg-toss-blue-light/30 border-toss-blue/10 transition-all"
       : "bg-white rounded-3xl p-4 shadow-sm border border-slate-100"}>
-      <div className="flex items-center justify-between gap-2">
-        {/* From → To with avatars */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getGradient(t.from)} flex items-center justify-center font-bold text-white text-[11px] shrink-0`}>
-            {t.from.charAt(0)}
-          </div>
-          <span className="text-[12px] font-bold text-toss-text-primary shrink-0 max-w-[52px] truncate">{t.from}</span>
-          <ArrowRight className="w-3.5 h-3.5 text-toss-blue shrink-0" />
-          <div className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getGradient(t.to)} flex items-center justify-center font-bold text-white text-[11px] shrink-0`}>
-            {t.to.charAt(0)}
-          </div>
-          <span className="text-[12px] font-bold text-toss-text-primary shrink-0 max-w-[52px] truncate">{t.to}</span>
+      {/* Row 1: From avatar + name → To avatar + name */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getGradient(t.from)} flex items-center justify-center font-bold text-white text-[11px] shrink-0`}>
+          {t.from.charAt(0)}
         </div>
-        {/* Amount + buttons */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right">
-            <p className="text-[14px] font-black tabular-nums text-toss-blue">₩{formatKRW(t.amount)}</p>
-            <p className="text-[10px] text-toss-blue/60">송금 대기</p>
-          </div>
-          <button onClick={() => handleCopyAmount(t.amount, t.to)}
-            className="px-2 py-1 text-[10px] font-bold rounded-lg bg-white border border-toss-border text-toss-text-secondary hover:bg-toss-bg transition-colors">
-            복사
-          </button>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => markComplete(t.from, t.to, t.amount)}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-lg shrink-0 bg-toss-blue text-white hover:bg-toss-blue-dark transition-colors">
-            완료 처리
-          </motion.button>
+        <span className="text-[13px] font-bold text-toss-text-primary truncate">{t.from}</span>
+        <ArrowRight className="w-3.5 h-3.5 text-toss-blue shrink-0" />
+        <div className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getGradient(t.to)} flex items-center justify-center font-bold text-white text-[11px] shrink-0`}>
+          {t.to.charAt(0)}
         </div>
+        <span className="text-[13px] font-bold text-toss-text-primary truncate">{t.to}</span>
+      </div>
+      {/* Row 2: Amount + Copy button (no 완료 처리 — handled above) */}
+      <div className="flex items-center justify-between pl-9">
+        <div>
+          <p className="text-[17px] font-black tabular-nums text-toss-blue">₩{formatKRW(t.amount)}</p>
+          <p className="text-[10px] text-toss-blue/60 mt-0.5">송금 대기</p>
+        </div>
+        <button onClick={() => handleCopyAmount(t.amount, t.to)}
+          className="px-3 py-1.5 text-[11px] font-bold rounded-xl bg-white border border-toss-border text-toss-text-secondary hover:bg-toss-bg transition-colors shrink-0">
+          금액 복사
+        </button>
       </div>
     </div>
   );
