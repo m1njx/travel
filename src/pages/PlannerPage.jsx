@@ -333,6 +333,112 @@ function AmPmDropdown({ value, onChange, isOpen, onToggle, dropdownId }) {
   );
 }
 
+function TimeInputGroup({ label, value, onChange, onClear, dropdownId, activeDropdown, onToggleDropdown }) {
+  const parsed = parseTime24(value);
+  const [localHour, setLocalHour] = useState(parsed.hour);
+  const [localMin, setLocalMin] = useState(parsed.minute);
+
+  useEffect(() => {
+    setLocalHour(parsed.hour);
+    setLocalMin(parsed.minute);
+  }, [value]);
+
+  const handleHourChange = (e) => {
+    let val = e.target.value.replace(/[^0-9]/g, '');
+    if (val !== '') {
+      const num = parseInt(val, 10);
+      if (num > 12) val = '12';
+    }
+    setLocalHour(val);
+  };
+
+  const handleMinChange = (e) => {
+    let val = e.target.value.replace(/[^0-9]/g, '');
+    if (val !== '') {
+      const num = parseInt(val, 10);
+      if (num > 59) val = '59';
+    }
+    setLocalMin(val);
+  };
+
+  const handleHourBlur = () => {
+    let h = localHour;
+    if (!h || h === '0' || h === '00') h = '12';
+    else h = h.padStart(2, '0');
+    setLocalHour(h);
+    onChange(formatTime24(parsed.ampm, h, localMin || '00'));
+  };
+
+  const handleMinBlur = () => {
+    let m = localMin;
+    if (!m) m = '00';
+    else m = m.padStart(2, '0');
+    setLocalMin(m);
+    onChange(formatTime24(parsed.ampm, localHour || '12', m));
+  };
+
+  const handleAmPmChange = (newAmPm) => {
+    onChange(formatTime24(newAmPm, localHour || '12', localMin || '00'));
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-1 w-full bg-white px-3 py-1.5 rounded-xl border border-toss-border focus-within:border-toss-blue focus-within:ring-[1px] focus-within:ring-toss-blue transition-all h-[38px] shadow-sm animate-fade-in">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <span className="text-[11px] text-toss-text-secondary font-semibold whitespace-nowrap shrink-0">{label}</span>
+        <div className="h-3 w-[1px] bg-toss-border shrink-0 mx-0.5" />
+        <AmPmDropdown 
+          value={parsed.ampm} 
+          onChange={handleAmPmChange} 
+          isOpen={activeDropdown === dropdownId}
+          onToggle={onToggleDropdown}
+          dropdownId={dropdownId}
+        />
+        <div className="flex items-center justify-center min-w-0 flex-1 gap-1">
+          <input 
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={2}
+            placeholder="09"
+            value={localHour}
+            onChange={handleHourChange}
+            onBlur={handleHourBlur}
+            onKeyDown={handleKeyDown}
+            className="w-6 text-center font-bold text-[13px] text-toss-text-primary bg-transparent border-0 p-0 focus:ring-0 outline-none select-all"
+          />
+          <span className="text-[12px] text-toss-text-tertiary font-bold shrink-0">:</span>
+          <input 
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={2}
+            placeholder="00"
+            value={localMin}
+            onChange={handleMinChange}
+            onBlur={handleMinBlur}
+            onKeyDown={handleKeyDown}
+            className="w-6 text-center font-bold text-[13px] text-toss-text-primary bg-transparent border-0 p-0 focus:ring-0 outline-none select-all"
+          />
+        </div>
+      </div>
+      <button 
+        type="button" 
+        onClick={onClear} 
+        className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5 transition-colors" 
+        title="시간 제거"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
 function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onTogglePlace, onDeletePlace, onUpdatePlace, apiKey, onUpdatePlacesList }) {
   const [showAdd, setShowAdd] = useState(false);
   const [pName, setPName] = useState('');
@@ -684,52 +790,17 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                                 >
                                   ⏰ 시작 시간 지정
                                 </button>
-                              ) : (() => {
-                                const parsed = parseTime24(editPStartTime);
-                                return (
-                                  <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
-                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                      <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
-                                      <AmPmDropdown 
-                                        value={parsed.ampm} 
-                                        onChange={(val) => setEditPStartTime(formatTime24(val, parsed.hour, parsed.minute))} 
-                                        isOpen={activeDropdown === 'editStartAmPm'}
-                                        onToggle={setActiveDropdown}
-                                        dropdownId="editStartAmPm"
-                                      />
-                                      <select 
-                                        value={parsed.hour} 
-                                        onChange={(e) => setEditPStartTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
-                                        className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                                      >
-                                        {Array.from({ length: 12 }, (_, i) => {
-                                          const val = (i + 1).toString().padStart(2, '0');
-                                          return <option key={val} value={val}>{val}시</option>;
-                                        })}
-                                      </select>
-                                      <span className="text-[12px] text-toss-text-tertiary">:</span>
-                                      <select 
-                                        value={parsed.minute} 
-                                        onChange={(e) => setEditPStartTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
-                                        className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                                      >
-                                        {Array.from({ length: 60 }, (_, i) => {
-                                          const val = i.toString().padStart(2, '0');
-                                          return <option key={val} value={val}>{val}분</option>;
-                                        })}
-                                      </select>
-                                    </div>
-                                    <button 
-                                      type="button" 
-                                      onClick={() => setEditPStartTime('')} 
-                                      className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
-                                      title="시간 제거"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                );
-                              })()}
+                              ) : (
+                                <TimeInputGroup
+                                  label="시작"
+                                  value={editPStartTime}
+                                  onChange={setEditPStartTime}
+                                  onClear={() => setEditPStartTime('')}
+                                  dropdownId="editStartAmPm"
+                                  activeDropdown={activeDropdown}
+                                  onToggleDropdown={setActiveDropdown}
+                                />
+                              )}
                             </div>
 
                             {useEditEndTime && (
@@ -742,55 +813,20 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                                   >
                                     ⏰ 종료 시간 지정
                                   </button>
-                                ) : (() => {
-                                  const parsed = parseTime24(editPEndTime);
-                                  return (
-                                    <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
-                                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                        <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료</span>
-                                        <AmPmDropdown 
-                                          value={parsed.ampm} 
-                                          onChange={(val) => setEditPEndTime(formatTime24(val, parsed.hour, parsed.minute))} 
-                                          isOpen={activeDropdown === 'editEndAmPm'}
-                                          onToggle={setActiveDropdown}
-                                          dropdownId="editEndAmPm"
-                                        />
-                                        <select 
-                                          value={parsed.hour} 
-                                          onChange={(e) => setEditPEndTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
-                                          className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                                        >
-                                          {Array.from({ length: 12 }, (_, i) => {
-                                            const val = (i + 1).toString().padStart(2, '0');
-                                            return <option key={val} value={val}>{val}시</option>;
-                                          })}
-                                        </select>
-                                        <span className="text-[12px] text-toss-text-tertiary">:</span>
-                                        <select 
-                                          value={parsed.minute} 
-                                          onChange={(e) => setEditPEndTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
-                                          className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                                        >
-                                          {Array.from({ length: 60 }, (_, i) => {
-                                            const val = i.toString().padStart(2, '0');
-                                            return <option key={val} value={val}>{val}분</option>;
-                                          })}
-                                        </select>
-                                      </div>
-                                      <button 
-                                        type="button" 
-                                        onClick={() => {
-                                          setEditPEndTime('');
-                                          setUseEditEndTime(false);
-                                        }} 
-                                        className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
-                                        title="시간 제거"
-                                      >
-                                        <X className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  );
-                                })()}
+                                ) : (
+                                  <TimeInputGroup
+                                    label="종료"
+                                    value={editPEndTime}
+                                    onChange={setEditPEndTime}
+                                    onClear={() => {
+                                      setEditPEndTime('');
+                                      setUseEditEndTime(false);
+                                    }}
+                                    dropdownId="editEndAmPm"
+                                    activeDropdown={activeDropdown}
+                                    onToggleDropdown={setActiveDropdown}
+                                  />
+                                )}
                               </div>
                             )}
                           </div>
@@ -918,52 +954,17 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                         >
                           ⏰ 시작 시간 지정
                         </button>
-                      ) : (() => {
-                        const parsed = parseTime24(pStartTime);
-                        return (
-                          <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
-                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
-                              <AmPmDropdown 
-                                value={parsed.ampm} 
-                                onChange={(val) => setPStartTime(formatTime24(val, parsed.hour, parsed.minute))} 
-                                isOpen={activeDropdown === 'addStartAmPm'}
-                                onToggle={setActiveDropdown}
-                                dropdownId="addStartAmPm"
-                              />
-                              <select 
-                                value={parsed.hour} 
-                                onChange={(e) => setPStartTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
-                                className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                              >
-                                {Array.from({ length: 12 }, (_, i) => {
-                                  const val = (i + 1).toString().padStart(2, '0');
-                                  return <option key={val} value={val}>{val}시</option>;
-                                })}
-                              </select>
-                              <span className="text-[12px] text-toss-text-tertiary">:</span>
-                              <select 
-                                value={parsed.minute} 
-                                onChange={(e) => setPStartTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
-                                className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                              >
-                                {Array.from({ length: 60 }, (_, i) => {
-                                  const val = i.toString().padStart(2, '0');
-                                  return <option key={val} value={val}>{val}분</option>;
-                                })}
-                              </select>
-                            </div>
-                            <button 
-                              type="button" 
-                              onClick={() => setPStartTime('')} 
-                              className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
-                              title="시간 제거"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        );
-                      })()}
+                      ) : (
+                        <TimeInputGroup
+                          label="시작"
+                          value={pStartTime}
+                          onChange={setPStartTime}
+                          onClear={() => setPStartTime('')}
+                          dropdownId="addStartAmPm"
+                          activeDropdown={activeDropdown}
+                          onToggleDropdown={setActiveDropdown}
+                        />
+                      )}
                     </div>
 
                     {useEndTime && (
@@ -976,55 +977,20 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                           >
                             ⏰ 종료 시간 지정
                           </button>
-                        ) : (() => {
-                          const parsed = parseTime24(pEndTime);
-                          return (
-                            <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
-                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료</span>
-                                <AmPmDropdown 
-                                  value={parsed.ampm} 
-                                  onChange={(val) => setPEndTime(formatTime24(val, parsed.hour, parsed.minute))} 
-                                  isOpen={activeDropdown === 'addEndAmPm'}
-                                  onToggle={setActiveDropdown}
-                                  dropdownId="addEndAmPm"
-                                />
-                                <select 
-                                  value={parsed.hour} 
-                                  onChange={(e) => setPEndTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
-                                  className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                                >
-                                  {Array.from({ length: 12 }, (_, i) => {
-                                    const val = (i + 1).toString().padStart(2, '0');
-                                    return <option key={val} value={val}>{val}시</option>;
-                                  })}
-                                </select>
-                                <span className="text-[12px] text-toss-text-tertiary">:</span>
-                                <select 
-                                  value={parsed.minute} 
-                                  onChange={(e) => setPEndTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
-                                  className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
-                                >
-                                  {Array.from({ length: 60 }, (_, i) => {
-                                    const val = i.toString().padStart(2, '0');
-                                    return <option key={val} value={val}>{val}분</option>;
-                                  })}
-                                </select>
-                              </div>
-                              <button 
-                                type="button" 
-                                onClick={() => {
-                                  setPEndTime('');
-                                  setUseEndTime(false);
-                                }} 
-                                className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
-                                title="시간 제거"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          );
-                        })()}
+                        ) : (
+                          <TimeInputGroup
+                            label="종료"
+                            value={pEndTime}
+                            onChange={setPEndTime}
+                            onClear={() => {
+                              setPEndTime('');
+                              setUseEndTime(false);
+                            }}
+                            dropdownId="addEndAmPm"
+                            activeDropdown={activeDropdown}
+                            onToggleDropdown={setActiveDropdown}
+                          />
+                        )}
                       </div>
                     )}
                   </div>
