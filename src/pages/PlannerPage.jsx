@@ -554,15 +554,29 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                           className="p-3 bg-toss-bg rounded-xl space-y-2 border border-toss-blue/20"
                         >
                           <div className="grid grid-cols-12 gap-2">
-                            <div className="col-span-6 flex items-center gap-1 bg-white px-2 py-1.5 rounded-xl border border-toss-border">
-                              <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap">시작</span>
-                              <input type="time" value={editPStartTime} onChange={e => setEditPStartTime(e.target.value)}
-                                className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                            <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
+                              <div className="flex items-center gap-1 min-w-0 flex-1">
+                                <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
+                                <input type="time" value={editPStartTime} onChange={e => setEditPStartTime(e.target.value)}
+                                  className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                              </div>
+                              {editPStartTime && (
+                                <button type="button" onClick={() => setEditPStartTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="시작 시간 초기화">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
-                            <div className="col-span-6 flex items-center gap-1 bg-white px-2 py-1.5 rounded-xl border border-toss-border">
-                              <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap">종료</span>
-                              <input type="time" value={editPEndTime} onChange={e => setEditPEndTime(e.target.value)}
-                                className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                            <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
+                              <div className="flex items-center gap-1 min-w-0 flex-1">
+                                <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료(선택)</span>
+                                <input type="time" value={editPEndTime} onChange={e => setEditPEndTime(e.target.value)}
+                                  className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                              </div>
+                              {editPEndTime && (
+                                <button type="button" onClick={() => setEditPEndTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="종료 시간 초기화">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
                           </div>
                           <input type="text" placeholder="방문지 이름" value={editPName} onChange={e => setEditPName(e.target.value)}
@@ -655,15 +669,29 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
               {showAdd ? (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 p-3.5 bg-toss-bg rounded-xl space-y-2.5">
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-6 flex items-center gap-1 bg-white px-2 py-1.5 rounded-xl border border-toss-border">
-                      <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap">시작</span>
-                      <input type="time" value={pStartTime} onChange={e => setPStartTime(e.target.value)}
-                        className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                    <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                        <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
+                        <input type="time" value={pStartTime} onChange={e => setPStartTime(e.target.value)}
+                          className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                      </div>
+                      {pStartTime && (
+                        <button type="button" onClick={() => setPStartTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="시작 시간 초기화">
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
-                    <div className="col-span-6 flex items-center gap-1 bg-white px-2 py-1.5 rounded-xl border border-toss-border">
-                      <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap">종료</span>
-                      <input type="time" value={pEndTime} onChange={e => setPEndTime(e.target.value)}
-                        className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                    <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                        <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료(선택)</span>
+                        <input type="time" value={pEndTime} onChange={e => setPEndTime(e.target.value)}
+                          className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+                      </div>
+                      {pEndTime && (
+                        <button type="button" onClick={() => setPEndTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="종료 시간 초기화">
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <input type="text" placeholder="방문지 이름 (예: 루브르)" value={pName} onChange={e => setPName(e.target.value)}
