@@ -249,6 +249,90 @@ export default function PlannerPage({ sync, nickname, apiKey }) {
   );
 }
 
+const parseTime24 = (timeStr) => {
+  if (!timeStr) return { ampm: '오전', hour: '09', minute: '00' };
+  const [hStr, mStr] = timeStr.split(':');
+  const h24 = parseInt(hStr, 10);
+  const minute = mStr || '00';
+  if (isNaN(h24)) return { ampm: '오전', hour: '09', minute: '00' };
+  
+  let ampm = '오전';
+  let h12 = h24;
+  if (h24 >= 12) {
+    ampm = '오후';
+    h12 = h24 === 12 ? 12 : h24 - 12;
+  } else if (h24 === 0) {
+    h12 = 12;
+  }
+  const hour = h12.toString().padStart(2, '0');
+  return { ampm, hour, minute };
+};
+
+const formatTime24 = (ampm, hour, minute) => {
+  let h12 = parseInt(hour, 10) || 9;
+  let h24 = h12;
+  if (ampm === '오후') {
+    h24 = h12 === 12 ? 12 : h12 + 12;
+  } else { // 오전
+    h24 = h12 === 12 ? 0 : h12;
+  }
+  const hStr = h24.toString().padStart(2, '0');
+  const mStr = minute.toString().padStart(2, '0');
+  return `${hStr}:${mStr}`;
+};
+
+function AmPmDropdown({ value, onChange, isOpen, onToggle, dropdownId }) {
+  return (
+    <div className="relative shrink-0 select-none">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(isOpen ? null : dropdownId);
+        }}
+        className="px-2 py-1 bg-toss-bg hover:bg-toss-border/40 rounded-lg text-[12px] font-bold text-toss-text-primary flex items-center gap-1 transition-all active:scale-95 animate-fade-in"
+      >
+        <span>{value}</span>
+        <ChevronDown className="w-3 h-3 text-toss-text-secondary shrink-0" />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ duration: 0.12 }}
+            className="absolute left-0 mt-1.5 z-[999] bg-white border border-toss-border/60 shadow-xl rounded-xl py-1 min-w-[76px] flex flex-col text-left overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                onChange('오전');
+                onToggle(null);
+              }}
+              className={`px-3 py-1.8 text-[12px] font-semibold transition-colors hover:bg-toss-blue/5 text-left ${value === '오전' ? 'text-toss-blue bg-toss-blue/5 font-extrabold' : 'text-toss-text-primary'}`}
+            >
+              오전
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onChange('오후');
+                onToggle(null);
+              }}
+              className={`px-3 py-1.8 text-[12px] font-semibold transition-colors hover:bg-toss-blue/5 text-left ${value === '오후' ? 'text-toss-blue bg-toss-blue/5 font-extrabold' : 'text-toss-text-primary'}`}
+            >
+              오후
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onTogglePlace, onDeletePlace, onUpdatePlace, apiKey, onUpdatePlacesList }) {
   const [showAdd, setShowAdd] = useState(false);
   const [pName, setPName] = useState('');
@@ -257,6 +341,18 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
   const [pEndTime, setPEndTime] = useState('');
   const [pUrl, setPUrl] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
+
+  const [useEndTime, setUseEndTime] = useState(false);
+  const [useEditEndTime, setUseEditEndTime] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState(null);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setActiveDropdown(null);
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   // States for map and AI features
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
@@ -553,31 +649,150 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                           exit={{ opacity: 0 }}
                           className="p-3 bg-toss-bg rounded-xl space-y-2 border border-toss-blue/20"
                         >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                              <input 
+                                type="checkbox" 
+                                checked={useEditEndTime} 
+                                onChange={e => {
+                                  setUseEditEndTime(e.target.checked);
+                                  if (!e.target.checked) {
+                                    setEditPEndTime('');
+                                  } else {
+                                    let defaultEnd = '10:00';
+                                    if (editPStartTime) {
+                                      const [h, m] = editPStartTime.split(':').map(Number);
+                                      defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                                    }
+                                    setEditPEndTime(defaultEnd);
+                                  }
+                                }} 
+                                className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue focus:ring-toss-blue"
+                              />
+                              <span className="text-[10.5px] font-semibold text-toss-text-secondary">종료 시간 포함</span>
+                            </label>
+                          </div>
+
                           <div className="grid grid-cols-12 gap-2">
-                            <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
-                              <div className="flex items-center gap-1 min-w-0 flex-1">
-                                <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
-                                <input type="time" value={editPStartTime} onChange={e => setEditPStartTime(e.target.value)}
-                                  className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
-                              </div>
-                              {editPStartTime && (
-                                <button type="button" onClick={() => setEditPStartTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="시작 시간 초기화">
-                                  <X className="w-3 h-3" />
+                            <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
+                              {!editPStartTime ? (
+                                <button 
+                                  type="button" 
+                                  onClick={() => setEditPStartTime('09:00')}
+                                  className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
+                                >
+                                  ⏰ 시작 시간 지정
                                 </button>
-                              )}
+                              ) : (() => {
+                                const parsed = parseTime24(editPStartTime);
+                                return (
+                                  <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
+                                      <AmPmDropdown 
+                                        value={parsed.ampm} 
+                                        onChange={(val) => setEditPStartTime(formatTime24(val, parsed.hour, parsed.minute))} 
+                                        isOpen={activeDropdown === 'editStartAmPm'}
+                                        onToggle={setActiveDropdown}
+                                        dropdownId="editStartAmPm"
+                                      />
+                                      <select 
+                                        value={parsed.hour} 
+                                        onChange={(e) => setEditPStartTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
+                                        className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                                      >
+                                        {Array.from({ length: 12 }, (_, i) => {
+                                          const val = (i + 1).toString().padStart(2, '0');
+                                          return <option key={val} value={val}>{val}시</option>;
+                                        })}
+                                      </select>
+                                      <span className="text-[12px] text-toss-text-tertiary">:</span>
+                                      <select 
+                                        value={parsed.minute} 
+                                        onChange={(e) => setEditPStartTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
+                                        className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                                      >
+                                        {Array.from({ length: 60 }, (_, i) => {
+                                          const val = i.toString().padStart(2, '0');
+                                          return <option key={val} value={val}>{val}분</option>;
+                                        })}
+                                      </select>
+                                    </div>
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setEditPStartTime('')} 
+                                      className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
+                                      title="시간 제거"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                             </div>
-                            <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
-                              <div className="flex items-center gap-1 min-w-0 flex-1">
-                                <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료(선택)</span>
-                                <input type="time" value={editPEndTime} onChange={e => setEditPEndTime(e.target.value)}
-                                  className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+
+                            {useEditEndTime && (
+                              <div className="col-span-6">
+                                {!editPEndTime ? (
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setEditPEndTime('10:00')}
+                                    className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
+                                  >
+                                    ⏰ 종료 시간 지정
+                                  </button>
+                                ) : (() => {
+                                  const parsed = parseTime24(editPEndTime);
+                                  return (
+                                    <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
+                                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                        <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료</span>
+                                        <AmPmDropdown 
+                                          value={parsed.ampm} 
+                                          onChange={(val) => setEditPEndTime(formatTime24(val, parsed.hour, parsed.minute))} 
+                                          isOpen={activeDropdown === 'editEndAmPm'}
+                                          onToggle={setActiveDropdown}
+                                          dropdownId="editEndAmPm"
+                                        />
+                                        <select 
+                                          value={parsed.hour} 
+                                          onChange={(e) => setEditPEndTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
+                                          className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                                        >
+                                          {Array.from({ length: 12 }, (_, i) => {
+                                            const val = (i + 1).toString().padStart(2, '0');
+                                            return <option key={val} value={val}>{val}시</option>;
+                                          })}
+                                        </select>
+                                        <span className="text-[12px] text-toss-text-tertiary">:</span>
+                                        <select 
+                                          value={parsed.minute} 
+                                          onChange={(e) => setEditPEndTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
+                                          className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                                        >
+                                          {Array.from({ length: 60 }, (_, i) => {
+                                            const val = i.toString().padStart(2, '0');
+                                            return <option key={val} value={val}>{val}분</option>;
+                                          })}
+                                        </select>
+                                      </div>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => {
+                                          setEditPEndTime('');
+                                          setUseEditEndTime(false);
+                                        }} 
+                                        className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
+                                        title="시간 제거"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                              {editPEndTime && (
-                                <button type="button" onClick={() => setEditPEndTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="종료 시간 초기화">
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
+                            )}
                           </div>
                           <input type="text" placeholder="방문지 이름" value={editPName} onChange={e => setEditPName(e.target.value)}
                             className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" autoFocus />
@@ -668,31 +883,150 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
 
               {showAdd ? (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 p-3.5 bg-toss-bg rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={useEndTime} 
+                        onChange={e => {
+                          setUseEndTime(e.target.checked);
+                          if (!e.target.checked) {
+                            setPEndTime('');
+                          } else {
+                            let defaultEnd = '10:00';
+                            if (pStartTime) {
+                              const [h, m] = pStartTime.split(':').map(Number);
+                              defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                            }
+                            setPEndTime(defaultEnd);
+                          }
+                        }} 
+                        className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue focus:ring-toss-blue"
+                      />
+                      <span className="text-[10.5px] font-semibold text-toss-text-secondary">종료 시간 포함</span>
+                    </label>
+                  </div>
+
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
-                      <div className="flex items-center gap-1 min-w-0 flex-1">
-                        <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
-                        <input type="time" value={pStartTime} onChange={e => setPStartTime(e.target.value)}
-                          className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
-                      </div>
-                      {pStartTime && (
-                        <button type="button" onClick={() => setPStartTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="시작 시간 초기화">
-                          <X className="w-3 h-3" />
+                    <div className={useEndTime ? "col-span-6" : "col-span-12"}>
+                      {!pStartTime ? (
+                        <button 
+                          type="button" 
+                          onClick={() => setPStartTime('09:00')}
+                          className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
+                        >
+                          ⏰ 시작 시간 지정
                         </button>
-                      )}
+                      ) : (() => {
+                        const parsed = parseTime24(pStartTime);
+                        return (
+                          <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">시작</span>
+                              <AmPmDropdown 
+                                value={parsed.ampm} 
+                                onChange={(val) => setPStartTime(formatTime24(val, parsed.hour, parsed.minute))} 
+                                isOpen={activeDropdown === 'addStartAmPm'}
+                                onToggle={setActiveDropdown}
+                                dropdownId="addStartAmPm"
+                              />
+                              <select 
+                                value={parsed.hour} 
+                                onChange={(e) => setPStartTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
+                                className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                              >
+                                {Array.from({ length: 12 }, (_, i) => {
+                                  const val = (i + 1).toString().padStart(2, '0');
+                                  return <option key={val} value={val}>{val}시</option>;
+                                })}
+                              </select>
+                              <span className="text-[12px] text-toss-text-tertiary">:</span>
+                              <select 
+                                value={parsed.minute} 
+                                onChange={(e) => setPStartTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
+                                className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                              >
+                                {Array.from({ length: 60 }, (_, i) => {
+                                  const val = i.toString().padStart(2, '0');
+                                  return <option key={val} value={val}>{val}분</option>;
+                                })}
+                              </select>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => setPStartTime('')} 
+                              className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
+                              title="시간 제거"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <div className="col-span-6 flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-toss-border">
-                      <div className="flex items-center gap-1 min-w-0 flex-1">
-                        <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료(선택)</span>
-                        <input type="time" value={pEndTime} onChange={e => setPEndTime(e.target.value)}
-                          className="w-full bg-transparent text-[12px] sm:text-[13px] outline-none border-0 p-0 text-center" />
+
+                    {useEndTime && (
+                      <div className="col-span-6">
+                        {!pEndTime ? (
+                          <button 
+                            type="button" 
+                            onClick={() => setPEndTime('10:00')}
+                            className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
+                          >
+                            ⏰ 종료 시간 지정
+                          </button>
+                        ) : (() => {
+                          const parsed = parseTime24(pEndTime);
+                          return (
+                            <div className="flex items-center justify-between gap-1 w-full bg-white px-2.5 py-1.5 rounded-xl border border-toss-border h-[38px]">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <span className="text-[10px] sm:text-[11px] text-toss-text-secondary font-medium whitespace-nowrap shrink-0">종료</span>
+                                <AmPmDropdown 
+                                  value={parsed.ampm} 
+                                  onChange={(val) => setPEndTime(formatTime24(val, parsed.hour, parsed.minute))} 
+                                  isOpen={activeDropdown === 'addEndAmPm'}
+                                  onToggle={setActiveDropdown}
+                                  dropdownId="addEndAmPm"
+                                />
+                                <select 
+                                  value={parsed.hour} 
+                                  onChange={(e) => setPEndTime(formatTime24(parsed.ampm, e.target.value, parsed.minute))}
+                                  className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                                >
+                                  {Array.from({ length: 12 }, (_, i) => {
+                                    const val = (i + 1).toString().padStart(2, '0');
+                                    return <option key={val} value={val}>{val}시</option>;
+                                  })}
+                                </select>
+                                <span className="text-[12px] text-toss-text-tertiary">:</span>
+                                <select 
+                                  value={parsed.minute} 
+                                  onChange={(e) => setPEndTime(formatTime24(parsed.ampm, parsed.hour, e.target.value))}
+                                  className="bg-transparent text-[13px] font-bold text-toss-text-primary outline-none border-0 p-0 cursor-pointer focus:ring-0"
+                                >
+                                  {Array.from({ length: 60 }, (_, i) => {
+                                    const val = i.toString().padStart(2, '0');
+                                    return <option key={val} value={val}>{val}분</option>;
+                                  })}
+                                </select>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  setPEndTime('');
+                                  setUseEndTime(false);
+                                }} 
+                                className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" 
+                                title="시간 제거"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </div>
-                      {pEndTime && (
-                        <button type="button" onClick={() => setPEndTime('')} className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5" title="종료 시간 초기화">
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
                   <input type="text" placeholder="방문지 이름 (예: 루브르)" value={pName} onChange={e => setPName(e.target.value)}
                     className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" autoFocus />
