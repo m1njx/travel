@@ -67,10 +67,50 @@ export default function App() {
     saveToStorage(STORAGE_KEYS.MEMBERS, newMembers);
   };
 
+  // Synced teams list
+  const [localTeams, setLocalTeams] = useState(() => loadFromStorage('tripsync_teams') || []);
+  const teams = (isOnline && meta?.teams) ? meta.teams : localTeams;
+
+  const setTeams = (newTeams) => {
+    if (isOnline) {
+      updateMeta({ teams: newTeams });
+    }
+    setLocalTeams(newTeams);
+    saveToStorage('tripsync_teams', newTeams);
+  };
+
   // Synced data via hooks (used in child pages via props)
   const schedulesSync = useSyncedList(roomCode, 'schedules', STORAGE_KEYS.SCHEDULES);
   const expensesSync = useSyncedList(roomCode, 'expenses', STORAGE_KEYS.EXPENSES);
   const checklistsSync = useSyncedList(roomCode, 'checklists', STORAGE_KEYS.CHECKLISTS);
+
+  // Active member and their assigned teams
+  const activeMember = members.find(m => typeof m === 'object' && m.name === nickname);
+  const activeMemberTeamIds = activeMember?.teamIds || [];
+  const activeMemberTeams = teams.filter(t => activeMemberTeamIds.includes(t.id));
+
+  // Filtered schedules based on active member's assigned teams
+  const filteredSchedulesItems = schedulesSync.items.filter(s => {
+    if (isAdmin) return true; // Admin sees all
+    if (!s.date || s.date === '날짜 미정') return true; // Always show undated schedules
+    if (activeMemberTeams.length === 0) return true; // If no teams are assigned, fallback to showing all
+
+    const scheduleDate = new Date(s.date);
+    scheduleDate.setHours(0, 0, 0, 0);
+
+    return activeMemberTeams.some(team => {
+      const start = new Date(team.startDate);
+      const end = new Date(team.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+      return scheduleDate >= start && scheduleDate <= end;
+    });
+  });
+
+  const filteredSchedulesSync = {
+    ...schedulesSync,
+    items: filteredSchedulesItems,
+  };
 
   // Shared Memo: use Firestore meta if online, otherwise local
   const [localMemo, setLocalMemo] = useState(() => loadFromStorage(STORAGE_KEYS.MEMO) || '');
@@ -181,15 +221,16 @@ export default function App() {
       return false;
     }
 
+    const newMembers = members.map(m => {
+      const currentName = typeof m === 'object' ? m.name : m;
+      if (currentName === nickname) {
+        return typeof m === 'object' ? { ...m, name: cleanName } : { name: cleanName, inviteCode: 'LOCAL' };
+      }
+      return m;
+    });
+
     if (isOnline) {
       try {
-        const newMembers = members.map(m => {
-          const currentName = typeof m === 'object' ? m.name : m;
-          if (currentName === nickname) {
-            return typeof m === 'object' ? { ...m, name: cleanName } : cleanName;
-          }
-          return m;
-        });
         await updateMeta({ members: newMembers });
       } catch (err) {
         console.error("Failed to update nickname in Firestore:", err);
@@ -198,6 +239,8 @@ export default function App() {
       }
     }
 
+    setLocalMembers(newMembers);
+    saveToStorage(STORAGE_KEYS.MEMBERS, newMembers);
     setNickname(cleanName);
     saveToStorage('tripsync_nickname', cleanName);
     alert("이름이 변경되었습니다.");
@@ -372,7 +415,7 @@ export default function App() {
             >
               {activeTab === 'dashboard' && (
                 <DashboardPage
-                  schedulesSync={schedulesSync}
+                  schedulesSync={filteredSchedulesSync}
                   checklistsSync={checklistsSync}
                   expensesSync={expensesSync}
                   members={memberNames}
@@ -386,12 +429,14 @@ export default function App() {
               )}
               {activeTab === 'planner' && (
                 <PlannerPage
-                  sync={schedulesSync}
+                  sync={filteredSchedulesSync}
                   nickname={nickname}
                   apiKey={apiKey}
                   initialExpandedDate={initialExpandedDate}
                   clearInitialExpandedDate={() => setInitialExpandedDate(null)}
                   logAction={logAction}
+                  activeMemberTeams={activeMemberTeams}
+                  isAdmin={isAdmin}
                 />
               )}
               {activeTab === 'expense' && (
@@ -437,6 +482,8 @@ export default function App() {
                   onLeave={handleLeaveRoom}
                   isAdmin={isAdmin}
                   onChangeNickname={handleChangeNickname}
+                  teams={teams}
+                  setTeams={setTeams}
                 />
               )}
             </motion.div>

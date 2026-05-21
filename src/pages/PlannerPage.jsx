@@ -6,7 +6,9 @@ import { optimizeScheduleWithGemini } from '../utils/gemini';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDate, clearInitialExpandedDate, logAction }) {
+export default function PlannerPage({
+  sync, nickname, apiKey, initialExpandedDate, clearInitialExpandedDate, logAction, activeMemberTeams = [], isAdmin = false
+}) {
   const { items: schedules, addItem, updateItem, removeItem } = sync;
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -36,6 +38,27 @@ export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDat
   }, [initialExpandedDate]);
 
   const handleAdd = async (s) => {
+    // Check team period constraint for members
+    if (!isAdmin && activeMemberTeams && activeMemberTeams.length > 0) {
+      if (s.date && s.date !== '날짜 미정') {
+        const scheduleDate = new Date(s.date);
+        scheduleDate.setHours(0, 0, 0, 0);
+
+        const isValid = activeMemberTeams.some(team => {
+          const start = new Date(team.startDate);
+          const end = new Date(team.endDate);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          return scheduleDate >= start && scheduleDate <= end;
+        });
+
+        if (!isValid) {
+          alert(`선택한 날짜(${s.date})는 소속된 팀의 여행 기간에 포함되지 않아 일정을 등록할 수 없습니다.\n\n* 소속 팀 기간:\n${activeMemberTeams.map(t => `- ${t.name}: ${t.startDate} ~ ${t.endDate}`).join('\n')}`);
+          return;
+        }
+      }
+    }
+
     let formattedUrl = s.url?.trim() || '';
     if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
       formattedUrl = `https://${formattedUrl}`;
@@ -58,6 +81,27 @@ export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDat
   };
 
   const handleUpdate = async (u) => {
+    // Check team period constraint for members
+    if (!isAdmin && activeMemberTeams && activeMemberTeams.length > 0) {
+      if (u.date && u.date !== '날짜 미정') {
+        const scheduleDate = new Date(u.date);
+        scheduleDate.setHours(0, 0, 0, 0);
+
+        const isValid = activeMemberTeams.some(team => {
+          const start = new Date(team.startDate);
+          const end = new Date(team.endDate);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          return scheduleDate >= start && scheduleDate <= end;
+        });
+
+        if (!isValid) {
+          alert(`선택한 날짜(${u.date})는 소속된 팀의 여행 기간에 포함되지 않아 일정을 수정할 수 없습니다.\n\n* 소속 팀 기간:\n${activeMemberTeams.map(t => `- ${t.name}: ${t.startDate} ~ ${t.endDate}`).join('\n')}`);
+          return;
+        }
+      }
+    }
+
     let formattedUrl = u.url?.trim() || '';
     if (formattedUrl && !/^https?:\/\//i.test(formattedUrl)) {
       formattedUrl = `https://${formattedUrl}`;
