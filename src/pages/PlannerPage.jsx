@@ -16,7 +16,8 @@ export default function PlannerPage({
   const updatePlacesList = async (sid, newPlaces) => {
     const s = schedules.find(x => x.id === sid);
     if (!s) return;
-    await updateItem({ ...s, places: newPlaces });
+    const allCompleted = newPlaces.length > 0 ? newPlaces.every(p => p.completed) : s.completed;
+    await updateItem({ ...s, completed: allCompleted, places: newPlaces });
   };
   
   // Track which dates are expanded
@@ -126,25 +127,44 @@ export default function PlannerPage({
   const addPlace = async (sid, place) => {
     const s = schedules.find(x => x.id === sid);
     if (!s) return;
-    await updateItem({ ...s, places: [...(s.places || []), { ...place, id: genId(), completed: false }] });
+    const newPlaces = [...(s.places || []), { ...place, id: genId(), completed: false }];
+    await updateItem({ ...s, completed: false, places: newPlaces });
   };
   const togglePlace = async (sid, pid) => {
     const s = schedules.find(x => x.id === sid);
     if (!s) return;
-    await updateItem({ ...s, places: s.places.map(p => p.id === pid ? { ...p, completed: !p.completed } : p) });
+    const newPlaces = s.places.map(p => p.id === pid ? { ...p, completed: !p.completed } : p);
+    const allCompleted = newPlaces.every(p => p.completed);
+    await updateItem({ ...s, completed: allCompleted, places: newPlaces });
   };
   const deletePlace = async (sid, pid) => {
     const s = schedules.find(x => x.id === sid);
     if (!s) return;
-    await updateItem({ ...s, places: s.places.filter(p => p.id !== pid) });
+    const newPlaces = s.places.filter(p => p.id !== pid);
+    const allCompleted = newPlaces.length > 0 ? newPlaces.every(p => p.completed) : s.completed;
+    await updateItem({ ...s, completed: allCompleted, places: newPlaces });
   };
   const updatePlace = async (sid, pid, updatedFields) => {
     const s = schedules.find(x => x.id === sid);
     if (!s) return;
+    const newPlaces = s.places.map(p => p.id === pid ? { ...p, ...updatedFields } : p);
+    const allCompleted = newPlaces.length > 0 ? newPlaces.every(p => p.completed) : s.completed;
     await updateItem({
       ...s,
-      places: s.places.map(p => p.id === pid ? { ...p, ...updatedFields } : p)
+      completed: allCompleted,
+      places: newPlaces
     });
+  };
+
+  const toggleSchedule = async (sid) => {
+    const s = schedules.find(x => x.id === sid);
+    if (!s) return;
+    const total = s.places?.length || 0;
+    const done = s.places?.filter(p => p.completed).length || 0;
+    const currentlyDone = total > 0 ? done === total : !!s.completed;
+    const newCompleted = !currentlyDone;
+    const newPlaces = (s.places || []).map(p => ({ ...p, completed: newCompleted }));
+    await updateItem({ ...s, completed: newCompleted, places: newPlaces });
   };
 
   // Group schedules by date
@@ -284,6 +304,7 @@ export default function PlannerPage({
                             onDeletePlace={(pid) => deletePlace(schedule.id, pid)}
                             onUpdatePlace={(pid, fields) => updatePlace(schedule.id, pid, fields)}
                             onUpdatePlacesList={(newPlaces) => updatePlacesList(schedule.id, newPlaces)}
+                            onToggleSchedule={() => toggleSchedule(schedule.id)}
                           />
                         ))}
                       </div>
@@ -415,6 +436,7 @@ export default function PlannerPage({
                             onDeletePlace={(pid) => deletePlace(schedule.id, pid)}
                             onUpdatePlace={(pid, fields) => updatePlace(schedule.id, pid, fields)}
                             onUpdatePlacesList={(newPlaces) => updatePlacesList(schedule.id, newPlaces)}
+                            onToggleSchedule={() => toggleSchedule(schedule.id)}
                             isMobile={true}
                           />
                         ))}
@@ -651,7 +673,7 @@ function TimeInputGroup({ label, value, onChange, onClear, dropdownId, activeDro
   );
 }
 
-function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onTogglePlace, onDeletePlace, onUpdatePlace, apiKey, onUpdatePlacesList, isMobile }) {
+function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onTogglePlace, onDeletePlace, onUpdatePlace, apiKey, onUpdatePlacesList, onToggleSchedule, isMobile }) {
   const [showAdd, setShowAdd] = useState(false);
   const [pName, setPName] = useState('');
   const [pMemo, setPMemo] = useState('');
@@ -688,7 +710,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
   
   const done = schedule.places?.filter(p => p.completed).length || 0;
   const total = schedule.places?.length || 0;
-  const allDone = total > 0 && done === total;
+  const allDone = total > 0 ? done === total : !!schedule.completed;
 
   const handleAdd = () => {
     if (!pName.trim()) return;
@@ -845,6 +867,19 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
       >
         {/* Mobile Schedule Header */}
         <div className="flex items-start justify-between">
+          {/* Toggle complete checkbox */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSchedule && onToggleSchedule(); }}
+            className="mt-0.5 shrink-0 mr-2.5 text-toss-blue"
+            title={allDone ? '완료 취소' : '완료 처리'}
+          >
+            {allDone ? (
+              <CheckCircle2 className="w-5 h-5 text-toss-success" />
+            ) : (
+              <Circle className="w-5 h-5 text-toss-text-tertiary" />
+            )}
+          </button>
+
           <div className="flex-1 min-w-0 active:opacity-75" onClick={() => setIsExpanded(!isExpanded)}>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               {allDone && (
@@ -853,7 +888,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                 </span>
               )}
             </div>
-            <h4 className="text-[15px] font-extrabold text-toss-text-primary tracking-tight leading-snug break-words">{schedule.title}</h4>
+            <h4 className={`text-[15px] font-extrabold tracking-tight leading-snug break-words ${allDone ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>{schedule.title}</h4>
 
             {schedule.url && (
               <button
@@ -1285,6 +1320,20 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
       className={`bg-white rounded-xl p-4 sm:p-5 border border-toss-border/80 shadow-sm transition-all duration-200 ${allDone ? 'border-l-4 border-toss-success bg-green-50/10' : ''}`}
     >
       <div className="flex items-start justify-between">
+        {/* Toggle complete checkbox (Desktop) */}
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          onClick={(e) => { e.stopPropagation(); onToggleSchedule && onToggleSchedule(); }}
+          className="mt-1 shrink-0 mr-3 text-toss-blue"
+          title={allDone ? '완료 취소' : '완료 처리'}
+        >
+          {allDone ? (
+            <CheckCircle2 className="w-5 h-5 text-toss-success" />
+          ) : (
+            <Circle className="w-5 h-5 text-toss-text-tertiary" />
+          )}
+        </motion.button>
+
         <div className="flex-1 cursor-pointer active:opacity-75" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             {allDone && (
@@ -1293,7 +1342,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
               </span>
             )}
           </div>
-          <h4 className="text-[15px] sm:text-[16px] font-bold text-toss-text-primary">{schedule.title}</h4>
+          <h4 className={`text-[15px] sm:text-[16px] font-bold ${allDone ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>{schedule.title}</h4>
 
 
           {/* Reference Link Button if URL exists */}

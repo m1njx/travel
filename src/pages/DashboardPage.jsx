@@ -65,11 +65,10 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
 
   // Helper to determine if a schedule is completed
   const isScheduleCompleted = (s) => {
-    if (s.completed) return true;
     if (s.places && s.places.length > 0) {
       return s.places.every(p => p.completed);
     }
-    return false;
+    return !!s.completed;
   };
 
   // Schedule filtering for D-Day and Bulletin Board Lists
@@ -650,7 +649,8 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                             const updatedPlaces = activeTimeline.schedule.places.map(p => 
                               p.id === place.id ? { ...p, completed: !p.completed } : p
                             );
-                            schedulesSync.updateItem({ ...activeTimeline.schedule, places: updatedPlaces });
+                            const allCompleted = updatedPlaces.every(p => p.completed);
+                            schedulesSync.updateItem({ ...activeTimeline.schedule, completed: allCompleted, places: updatedPlaces });
                           }}
                           className="w-5 h-5 min-w-[20px] min-h-[20px] bg-white border-2 border-toss-blue rounded-full flex items-center justify-center shadow-sm text-toss-blue hover:bg-toss-blue-light transition-all active:scale-90"
                         >
@@ -857,168 +857,110 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           </div>
         </div>
 
-        {/* Dynamic Highlight Card (가장 가까운 일정 공지) */}
+        {/* Active Schedules Feed */}
         <div className="flex flex-col mt-5">
           <div className="flex items-center justify-between px-5 mb-3.5">
             <div className="flex items-center gap-1.5 font-bold text-toss-text-primary text-[15px]">
-              <span className="text-[16px]">🎯</span>
-              <span>{nearestSchedule ? `${nearestSchedule.date} 중요 공지` : '중요 공지'}</span>
+              <span className="text-[16px]">📅</span>
+              <span>진행 중인 일정</span>
             </div>
             <span className="text-[11.5px] font-bold text-toss-blue bg-toss-blue-light/50 px-2.5 py-0.5 rounded-full shrink-0">
-              {nearestSchedule ? '1건' : '0건'}
-            </span>
-          </div>
-
-          {nearestSchedule ? (
-            <div 
-              onClick={() => onNavigateToSchedule(nearestSchedule.date)}
-              className="mx-5 bg-white border border-toss-border/55 rounded-2xl p-5 hover:shadow-md cursor-pointer transition-all active:scale-[0.98] shadow-sm flex flex-col gap-3.5 border-l-4 border-l-emerald-500 relative overflow-hidden"
-            >
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="bg-toss-blue-light text-toss-blue text-[11px] font-extrabold px-2.5 py-0.8 rounded-lg flex items-center gap-0.5 shadow-sm">
-                    🏫 {nearestSchedule.title}
-                  </span>
-                  <span className="bg-emerald-50 text-emerald-600 text-[10.5px] font-extrabold px-2 py-0.8 rounded-lg">
-                    🎯 맞춤 일정
-                  </span>
-                </div>
-                <span className="text-[11px] text-toss-text-tertiary font-extrabold ml-auto">
-                  {dDayText}
-                </span>
-              </div>
-
-              {/* Red-colored Warning/Notice Line */}
-              <div className="flex items-start gap-2 text-red-500 text-[12.5px] font-extrabold bg-red-50/70 p-3 rounded-2xl border border-red-100">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
-                <span className="leading-relaxed">
-                  ⚠️ {nearestSchedule.date} 중요 일정이 가장 가까운 날에 있습니다! 상세 일정을 필히 점검하시기 바랍니다.
-                </span>
-              </div>
-
-              <h3 className="text-[15.5px] font-extrabold text-toss-text-primary leading-tight mt-0.5">
-                {nearestSchedule.title}
-              </h3>
-
-              {nearestSchedule.places && nearestSchedule.places.length > 0 ? (
-                <div className="bg-toss-bg/30 p-3.5 rounded-2xl space-y-2 mt-0.5 border border-toss-border/20">
-                  {nearestSchedule.places.slice(0, 3).map((place, idx) => (
-                    <div key={place.id} className="flex items-center gap-2 text-[12.5px] text-toss-text-secondary">
-                      <span className="w-4.5 h-4.5 rounded-full bg-toss-blue/10 text-toss-blue flex items-center justify-center text-[9px] font-extrabold shrink-0 border border-toss-blue/10">
-                        {idx + 1}
-                      </span>
-                      <span className="font-semibold truncate flex-1">{place.name}</span>
-                      {place.time && (
-                        <span className="text-[10px] text-toss-blue font-bold bg-white border border-toss-blue/20 px-1.5 py-0.2 rounded-lg">
-                          ⏰ {place.time}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                  {nearestSchedule.places.length > 3 && (
-                    <p className="text-[11px] text-toss-text-tertiary pl-6 font-semibold pt-0.5">외 {nearestSchedule.places.length - 3}개 코스가 더 있습니다.</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[12px] text-toss-text-tertiary italic mt-0.5">등록된 세부 코스 정보가 존재하지 않습니다.</p>
-              )}
-
-              {/* Action Buttons Panel */}
-              <div className="flex gap-2 mt-2.5 border-t border-toss-border/40 pt-3 text-[11.5px] font-bold">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const updatedPlaces = nearestSchedule.places 
-                      ? nearestSchedule.places.map(p => ({ ...p, completed: true })) 
-                      : [];
-                    schedulesSync.updateItem({ ...nearestSchedule, completed: true, places: updatedPlaces });
-                  }}
-                  className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm btn-icon-sm"
-                >
-                  <Check className="w-4 h-4" /> 완료 처리
-                </button>
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onNavigateToSchedule(nearestSchedule.date);
-                  }}
-                  className="flex-1 py-2 bg-toss-bg hover:bg-toss-border/30 text-toss-text-secondary rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer text-center"
-                >
-                  <span>상세 이동</span> <ChevronRight className="w-4 h-4" />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="mx-5 bg-white border border-toss-border/50 rounded-2xl p-6 text-center shadow-sm">
-              <p className="text-[13px] text-toss-text-secondary font-medium">아직 등록된 첫번째 일정이 존재하지 않습니다.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Bulletin Feed Section (기대되는 다음 일정들) */}
-        <div className="flex flex-col mt-5">
-          <div className="flex items-center justify-between px-5 mb-3.5">
-            <div className="flex items-center gap-1.5 font-bold text-toss-text-primary text-[15px]">
-              <span className="text-[16px]">🔥</span>
-              <span>기대되는 다음 일정들</span>
-            </div>
-            <span className="text-[11.5px] font-medium text-toss-text-tertiary">
-              {remainingSchedules.length}건
+              {activeSchedules.length}건
             </span>
           </div>
 
           <div className="space-y-3.5 px-5">
-            {remainingSchedules.length > 0 ? (
-              remainingSchedules.map((schedule, idx) => {
+            {activeSchedules.length > 0 ? (
+              activeSchedules.map((schedule) => {
                 const schedDate = new Date(schedule.date);
                 const today = new Date();
-                today.setHours(0,0,0,0);
+                today.setHours(0, 0, 0, 0);
                 const timeDiff = schedDate - today;
                 const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-                
+
                 let dDayLabel = '';
                 if (daysDiff > 0) dDayLabel = `D-${daysDiff}`;
                 else if (daysDiff === 0) dDayLabel = 'D-Day';
                 else dDayLabel = `D+${Math.abs(daysDiff)}`;
 
                 return (
-                  <div 
+                  <div
                     key={schedule.id}
-                    onClick={() => onNavigateToSchedule(schedule.date)}
-                    className="bg-white border border-toss-border/50 rounded-2xl p-4.5 hover:shadow-md cursor-pointer transition-all active:scale-[0.98] shadow-sm flex flex-col gap-2 relative border-l-4 border-l-toss-blue/40"
+                    className="bg-white border border-toss-border/55 rounded-2xl p-5 hover:shadow-md transition-all active:scale-[0.98] shadow-sm flex flex-col gap-3 border-l-4 border-l-toss-blue/50 relative overflow-hidden"
                   >
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="bg-toss-blue-light text-toss-blue text-[10.5px] font-bold px-2 py-0.5 rounded-lg">
-                        📅 {schedule.date}
-                      </span>
-                      <span className="bg-red-50 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                        ⚠️ 중요
-                      </span>
-                      <span className="text-[10.5px] font-bold text-toss-text-tertiary ml-auto leading-none">
+                    {/* Card Header: date label + D-Day */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="bg-toss-blue-light text-toss-blue text-[11px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                          📅 {schedule.date}의 일정
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-toss-text-tertiary font-extrabold ml-auto">
                         {dDayLabel}
                       </span>
                     </div>
 
-                    <h4 className="text-[14.5px] font-extrabold text-toss-text-primary leading-tight mt-0.5">
+                    {/* Schedule Title */}
+                    <h3 className="text-[15.5px] font-extrabold text-toss-text-primary leading-tight">
                       {schedule.title}
-                    </h4>
+                    </h3>
 
+                    {/* Places Preview */}
                     {schedule.places && schedule.places.length > 0 ? (
-                      <p className="text-[12px] text-toss-text-secondary line-clamp-1 leading-relaxed mt-0.5">
-                        {schedule.places.map(p => p.name).join(' → ')}
-                      </p>
+                      <div className="bg-toss-bg/30 p-3 rounded-2xl space-y-1.5 border border-toss-border/20">
+                        {schedule.places.slice(0, 3).map((place, idx) => (
+                          <div key={place.id} className="flex items-center gap-2 text-[12px] text-toss-text-secondary">
+                            <span className="w-4 h-4 rounded-full bg-toss-blue/10 text-toss-blue flex items-center justify-center text-[9px] font-extrabold shrink-0 border border-toss-blue/10">
+                              {idx + 1}
+                            </span>
+                            <span className="font-semibold truncate flex-1">{place.name}</span>
+                            {place.time && (
+                              <span className="text-[10px] text-toss-blue font-bold bg-white border border-toss-blue/20 px-1.5 py-0.5 rounded-lg">
+                                ⏰ {place.time}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        {schedule.places.length > 3 && (
+                          <p className="text-[11px] text-toss-text-tertiary pl-5 font-semibold pt-0.5">외 {schedule.places.length - 3}개 코스가 더 있습니다.</p>
+                        )}
+                      </div>
                     ) : (
-                      <p className="text-[12.5px] text-toss-text-tertiary italic mt-0.5">등록된 장소가 없습니다.</p>
+                      <p className="text-[12px] text-toss-text-tertiary italic">등록된 세부 코스 정보가 없습니다.</p>
                     )}
 
-                    {/* Removed attachment count and view counts indicators */}
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 border-t border-toss-border/40 pt-3 text-[11.5px] font-bold">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const updatedPlaces = schedule.places
+                            ? schedule.places.map(p => ({ ...p, completed: true }))
+                            : [];
+                          schedulesSync.updateItem({ ...schedule, completed: true, places: updatedPlaces });
+                        }}
+                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm"
+                      >
+                        <Check className="w-4 h-4" /> 완료 처리
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNavigateToSchedule(schedule.date);
+                        }}
+                        className="flex-1 py-2 bg-toss-bg hover:bg-toss-border/30 text-toss-text-secondary rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95"
+                      >
+                        <span>상세 이동</span> <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 );
               })
             ) : (
-              <div className="bg-white border border-toss-border/50 rounded-2xl p-6 text-center text-toss-text-tertiary text-[12px] italic shadow-sm">
-                그 외 다음으로 예정된 추천 일정이 없습니다.
+              <div className="bg-white border border-toss-border/50 rounded-2xl p-6 text-center shadow-sm">
+                <p className="text-[13px] text-toss-text-secondary font-medium">진행 중인 일정이 없습니다. 플래너에서 일정을 등록해보세요!</p>
               </div>
             )}
           </div>
