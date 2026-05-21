@@ -7,7 +7,7 @@ import {
   Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
   Wind, Droplets
 } from 'lucide-react';
-import { loadFromStorage, saveToStorage } from '../utils/storage';
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
 import { getAITravelTip } from '../utils/gemini';
 
@@ -56,9 +56,31 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
   const checklists = checklistsSync?.items || [];
   const expenses = expensesSync?.items || [];
 
+  // Team and members data for mobile tags
+  const teams = loadFromStorage('tripsync_teams') || [];
+  const storedMembers = loadFromStorage(STORAGE_KEYS.MEMBERS) || [];
+  const activeMember = storedMembers.find(m => typeof m === 'object' && m.name === nickname);
+  const activeMemberTeamIds = activeMember?.teamIds || [];
+  const activeMemberTeams = teams.filter(t => activeMemberTeamIds.includes(t.id));
+
+  // Schedule filtering for D-Day and Bulletin Board Lists
+  const sortedSchedules = [...schedules]
+    .filter(s => s.date && s.date !== '날짜 미정')
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcomingSchedules = sortedSchedules.filter(s => s.date >= todayStr);
+  const nearestSchedule = upcomingSchedules.length > 0 ? upcomingSchedules[0] : sortedSchedules[0];
+  const remainingSchedules = nearestSchedule 
+    ? sortedSchedules.filter(s => s.id !== nearestSchedule.id)
+    : [];
+
   // Exchange rates state
   const [rates, setRates] = useState(null);
   const [ratesLoading, setRatesLoading] = useState(false);
+
+  // AI Tip Sheet Popover for Mobile
+  const [isAiTipModalOpen, setIsAiTipModalOpen] = useState(false);
 
   // Budget states
   const [totalBudget, setTotalBudget] = useState(() => {
@@ -370,8 +392,10 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
       variants={pageVariants} 
       initial="hidden" 
       animate="visible" 
-      className="pb-8 space-y-6 px-4 sm:px-5"
+      className="pb-24 md:pb-8"
     >
+      {/* ==================== DESKTOP UI ==================== */}
+      <div className="hidden md:block space-y-6 px-4 sm:px-5">
       {/* Welcome Header */}
       <motion.div variants={itemVariants} className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -745,6 +769,247 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           </div>
         </motion.div>
       </div>
+      </div> {/* END OF DESKTOP UI */}
+
+      {/* ==================== MOBILE UI ==================== */}
+      <div className="block md:hidden -mx-4 -mt-6 pb-12 flex flex-col bg-slate-50 min-h-screen text-toss-text-primary">
+        {/* Header Block */}
+        <div className="bg-gradient-to-b from-toss-blue via-toss-blue to-indigo-650 text-white pt-6 pb-8 px-5 rounded-b-[36px] shadow-lg shadow-toss-blue/15 relative overflow-hidden flex flex-col gap-4">
+          {/* Subtle background icon for rich premium feel */}
+          <div className="absolute right-[-20px] bottom-[-20px] opacity-10 pointer-events-none">
+            <Compass className="w-40 h-40 rotate-12" />
+          </div>
+
+          <div className="relative z-10 flex flex-col gap-1.5">
+            {/* Dynamic Active Team Badges */}
+            <div className="flex flex-wrap gap-1.5">
+              {activeMemberTeams.length > 0 ? (
+                activeMemberTeams.map(team => (
+                  <span key={team.id} className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
+                    ✈️ {team.name}
+                  </span>
+                ))
+              ) : (
+                <span className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
+                  🌍 자유 여행팀
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 bg-white/20 border border-white/30 text-white text-[11px] font-bold px-2.5 py-0.8 rounded-xl backdrop-blur-md shadow-sm">
+                ♿ 장애인 학생
+              </span>
+            </div>
+
+            <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight mt-1.5">
+              안녕하세요, {nickname}님 👋
+            </h2>
+            <p className="text-[12.5px] font-semibold text-white/80">
+              TripSync 모바일 가이드와 함께 편리하게 이동하세요!
+            </p>
+          </div>
+
+          {/* Quick Metrics 4-Column Grid */}
+          <div className="grid grid-cols-4 gap-2 mt-2.5 relative z-10">
+            {/* D-Day Button */}
+            <div className="bg-white/10 hover:bg-white/15 border border-white/10 backdrop-blur-md rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer">
+              <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center text-white mb-0.5">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <span className="text-[9.5px] font-bold opacity-80 leading-none">디데이</span>
+              <span className="text-[12px] font-extrabold tracking-tight pt-1 leading-none">{dDayText}</span>
+            </div>
+
+            {/* Checklist Button */}
+            <div className="bg-white/10 hover:bg-white/15 border border-white/10 backdrop-blur-md rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer">
+              <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center text-white mb-0.5">
+                <Backpack className="w-5 h-5" />
+              </div>
+              <span className="text-[9.5px] font-bold opacity-80 leading-none">준비율</span>
+              <span className="text-[12px] font-extrabold tracking-tight pt-1 leading-none">{checklistRate}%</span>
+            </div>
+
+            {/* Weather Button */}
+            <div 
+              onClick={() => { if (weather) setIsWeatherModalOpen(true); }}
+              className="bg-white/10 hover:bg-white/15 border border-white/10 backdrop-blur-md rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+            >
+              <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center text-white mb-0.5">
+                {weather ? <weather.icon className="w-5 h-5 text-white" /> : <Sun className="w-5 h-5" />}
+              </div>
+              <span className="text-[9.5px] font-bold opacity-80 leading-none">날씨</span>
+              <span className="text-[12px] font-extrabold tracking-tight pt-1 leading-none">
+                {weatherLoading ? '...' : weather ? `${weather.temp}°` : '날씨'}
+              </span>
+            </div>
+
+            {/* AI Tip Button */}
+            <div 
+              onClick={() => setIsAiTipModalOpen(true)}
+              className="bg-white/10 hover:bg-white/15 border border-white/10 backdrop-blur-md rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+            >
+              <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center text-white mb-0.5">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-[9.5px] font-bold opacity-80 leading-none">AI 팁</span>
+              <span className="text-[12px] font-extrabold tracking-tight pt-1 leading-none truncate max-w-full px-0.5">가이드</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Highlight Card (장애인 학생에게 중요한 공지) */}
+        <div className="flex flex-col mt-5">
+          <div className="flex items-center justify-between px-5 mb-3.5">
+            <div className="flex items-center gap-1.5 font-bold text-toss-text-primary text-[15px]">
+              <span className="text-[16px]">🎯</span>
+              <span>장애인 학생에게 중요한 공지</span>
+            </div>
+            <span className="text-[11.5px] font-bold text-toss-blue bg-toss-blue-light/50 px-2.5 py-0.5 rounded-full shrink-0">
+              1건
+            </span>
+          </div>
+
+          {nearestSchedule ? (
+            <div 
+              onClick={() => onNavigateToSchedule(nearestSchedule.date)}
+              className="mx-5 bg-white border border-toss-border/55 rounded-2xl p-5 hover:shadow-md cursor-pointer transition-all active:scale-[0.98] shadow-sm flex flex-col gap-3.5 border-l-4 border-l-emerald-500 relative overflow-hidden"
+            >
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="bg-toss-blue-light text-toss-blue text-[11px] font-extrabold px-2.5 py-0.8 rounded-lg flex items-center gap-0.5 shadow-sm">
+                    🏫 {nearestSchedule.title}
+                  </span>
+                  <span className="bg-emerald-50 text-emerald-600 text-[10.5px] font-extrabold px-2 py-0.8 rounded-lg">
+                    🎯 맞춤 일정
+                  </span>
+                </div>
+                <span className="text-[11px] text-toss-text-tertiary font-extrabold ml-auto">
+                  {dDayText}
+                </span>
+              </div>
+
+              {/* Red-colored Warning/Notice Line */}
+              <div className="flex items-start gap-2 text-red-500 text-[12.5px] font-extrabold bg-red-50/70 p-3 rounded-2xl border border-red-100">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+                <span className="leading-relaxed">
+                  ⚠️ {nearestSchedule.date} 중요 일정이 가장 가까운 날에 있습니다! 상세 일정을 필히 점검하시기 바랍니다.
+                </span>
+              </div>
+
+              <h3 className="text-[15.5px] font-extrabold text-toss-text-primary leading-tight mt-0.5">
+                {nearestSchedule.title}
+              </h3>
+
+              {nearestSchedule.places && nearestSchedule.places.length > 0 ? (
+                <div className="bg-toss-bg/30 p-3.5 rounded-2xl space-y-2 mt-0.5 border border-toss-border/20">
+                  {nearestSchedule.places.slice(0, 3).map((place, idx) => (
+                    <div key={place.id} className="flex items-center gap-2 text-[12.5px] text-toss-text-secondary">
+                      <span className="w-4.5 h-4.5 rounded-full bg-toss-blue/10 text-toss-blue flex items-center justify-center text-[9px] font-extrabold shrink-0 border border-toss-blue/10">
+                        {idx + 1}
+                      </span>
+                      <span className="font-semibold truncate flex-1">{place.name}</span>
+                      {place.time && (
+                        <span className="text-[10px] text-toss-blue font-bold bg-white border border-toss-blue/20 px-1.5 py-0.2 rounded-lg">
+                          ⏰ {place.time}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {nearestSchedule.places.length > 3 && (
+                    <p className="text-[11px] text-toss-text-tertiary pl-6 font-semibold pt-0.5">외 {nearestSchedule.places.length - 3}개 코스가 더 있습니다.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[12px] text-toss-text-tertiary italic mt-0.5">등록된 세부 코스 정보가 존재하지 않습니다.</p>
+              )}
+
+              <div className="flex justify-between items-center mt-2.5 border-t border-toss-border/40 pt-3 text-[11.5px] text-toss-blue font-extrabold">
+                <span>전체 코스 및 메모 확인하기</span>
+                <div className="flex items-center text-toss-blue">
+                  <span className="text-[10px]">이동</span>
+                  <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mx-5 bg-white border border-toss-border/50 rounded-2xl p-6 text-center shadow-sm">
+              <p className="text-[13px] text-toss-text-secondary font-medium">아직 등록된 첫번째 일정이 존재하지 않습니다.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Bulletin Feed Section (우리학교 학생들이 많이 본 게시글) */}
+        <div className="flex flex-col mt-5">
+          <div className="flex items-center justify-between px-5 mb-3.5">
+            <div className="flex items-center gap-1.5 font-bold text-toss-text-primary text-[15px]">
+              <span className="text-[16px]">🔥</span>
+              <span>우리학교 학생들이 많이 본 게시글</span>
+            </div>
+            <span className="text-[11.5px] font-medium text-toss-text-tertiary">
+              {remainingSchedules.length}건
+            </span>
+          </div>
+
+          <div className="space-y-3.5 px-5">
+            {remainingSchedules.length > 0 ? (
+              remainingSchedules.map((schedule, idx) => {
+                const schedDate = new Date(schedule.date);
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const timeDiff = schedDate - today;
+                const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                
+                let dDayLabel = '';
+                if (daysDiff > 0) dDayLabel = `D-${daysDiff}`;
+                else if (daysDiff === 0) dDayLabel = 'D-Day';
+                else dDayLabel = `D+${Math.abs(daysDiff)}`;
+
+                return (
+                  <div 
+                    key={schedule.id}
+                    onClick={() => onNavigateToSchedule(schedule.date)}
+                    className="bg-white border border-toss-border/50 rounded-2xl p-4.5 hover:shadow-md cursor-pointer transition-all active:scale-[0.98] shadow-sm flex flex-col gap-2 relative border-l-4 border-l-toss-blue/40"
+                  >
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="bg-toss-blue-light text-toss-blue text-[10.5px] font-bold px-2 py-0.5 rounded-lg">
+                        📅 {schedule.date}
+                      </span>
+                      <span className="bg-red-50 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                        ⚠️ 중요
+                      </span>
+                      <span className="text-[10.5px] font-bold text-toss-text-tertiary ml-auto leading-none">
+                        {dDayLabel}
+                      </span>
+                    </div>
+
+                    <h4 className="text-[14.5px] font-extrabold text-toss-text-primary leading-tight mt-0.5">
+                      {schedule.title}
+                    </h4>
+
+                    {schedule.places && schedule.places.length > 0 ? (
+                      <p className="text-[12px] text-toss-text-secondary line-clamp-1 leading-relaxed mt-0.5">
+                        {schedule.places.map(p => p.name).join(' → ')}
+                      </p>
+                    ) : (
+                      <p className="text-[12.5px] text-toss-text-tertiary italic mt-0.5">등록된 장소가 없습니다.</p>
+                    )}
+
+                    <div className="flex items-center gap-3 border-t border-toss-border/30 pt-2.5 mt-1 text-[11px] text-toss-text-tertiary font-semibold">
+                      <span className="flex items-center gap-0.5">
+                        📎 첨부 {schedule.places?.length || 0}
+                      </span>
+                      <span>•</span>
+                      <span>👁️ {(950 - idx * 125).toLocaleString()}회</span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-white border border-toss-border/50 rounded-2xl p-6 text-center text-toss-text-tertiary text-[12px] italic shadow-sm">
+                그 외 다음으로 예정된 추천 일정이 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Hourly Weather Details Popover Modal */}
       <AnimatePresence>
@@ -880,6 +1145,101 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
               <div className="border-t border-toss-border/40 pt-3.5 mt-4 shrink-0 flex items-center justify-between text-[9px] text-toss-text-tertiary">
                 <span>데이터 제공: Open-Meteo</span>
                 <span>TripSync Weather</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile AI Tip Sheet Popover Modal */}
+      <AnimatePresence>
+        {isAiTipModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/55 backdrop-blur-md"
+            onClick={() => setIsAiTipModalOpen(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="w-full max-w-md bg-white border border-toss-border/60 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col text-toss-text-primary"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-toss-border/50 pb-4 mb-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-toss-blue-light rounded-xl flex items-center justify-center text-toss-blue border border-toss-blue/10">
+                    <Sparkles className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-[17px] font-extrabold tracking-tight">
+                      TripSync AI 가이드 팁
+                    </h3>
+                    <p className="text-[10.5px] text-toss-text-secondary mt-0.5">
+                      실시간 여행 맞춤 가이드라인
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsAiTipModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-toss-bg hover:bg-toss-border/40 flex items-center justify-center text-toss-text-secondary transition-colors btn-icon-sm"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-0.5 scrollbar-none">
+                {tipError && (
+                  <div className="p-3 bg-red-50 text-red-600 rounded-xl text-[11px] font-medium flex items-start gap-1.5 border border-red-100 mb-3">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div className="flex-1 leading-relaxed">{tipError}</div>
+                  </div>
+                )}
+
+                <div className="bg-toss-bg/30 border border-toss-border/20 p-5 rounded-2xl">
+                  {loadingTip ? (
+                    <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+                      <div className="w-7 h-7 border-2 border-toss-blue-light border-t-toss-blue rounded-full animate-spin" />
+                      <p className="text-[12px] text-toss-text-secondary font-medium">유럽 현지 가이드 팁 분석 중...</p>
+                    </div>
+                  ) : (
+                    <p className="text-[14px] leading-relaxed font-bold text-toss-text-primary italic text-center">
+                      "{aiTip}"
+                    </p>
+                  )}
+                </div>
+
+                <p className="text-[11.5px] text-toss-text-tertiary leading-relaxed text-center px-4 font-semibold">
+                  {apiKey 
+                    ? "Gemini API를 활용해 등록하신 일정, 체크리스트, 가계부 지출 현황을 종합 분석한 실시간 여행 조언입니다." 
+                    : "API 키가 등록되지 않아 TripSync가 제공하는 기본 추천 팁이 노출되고 있습니다. 설정에서 키를 등록해 보세요!"}
+                </p>
+              </div>
+
+              {/* Action Footer */}
+              <div className="border-t border-toss-border/40 pt-4 mt-4 shrink-0 flex items-center gap-2">
+                {apiKey ? (
+                  <button
+                    onClick={handleGetAITip}
+                    disabled={loadingTip}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3.5 bg-toss-blue text-white rounded-2xl text-[13px] font-bold shadow-md hover:bg-toss-blue/90 disabled:opacity-50 transition-all active:scale-[0.98]"
+                  >
+                    <Sparkles className="w-4 h-4 text-white" />
+                    맞춤 AI 팁 요청
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleRotateLocalTip}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3.5 bg-toss-bg text-toss-text-primary rounded-2xl text-[13px] font-bold hover:bg-toss-border/30 transition-all active:scale-[0.98]"
+                  >
+                    다른 팁 보기
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>
