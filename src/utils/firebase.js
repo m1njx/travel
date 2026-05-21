@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -98,6 +98,17 @@ export function subscribeToRoomMeta(roomCode, onData) {
       onData(docSnap.data());
     }
   });
+}
+
+/**
+ * Get room metadata once (without subscribing)
+ */
+export async function getRoomMeta(roomCode) {
+  const firestore = getDb();
+  if (!firestore || !roomCode) return null;
+  const docRef = doc(firestore, 'trips', roomCode);
+  const docSnap = await getDoc(docRef);
+  return docSnap.exists() ? docSnap.data() : null;
 }
 
 /**

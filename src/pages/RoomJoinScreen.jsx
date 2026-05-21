@@ -1,113 +1,193 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Plane, Users, Plus, LogIn, Wifi, WifiOff } from 'lucide-react';
-import { generateRoomCode, isFirebaseConfigured } from '../utils/firebase';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plane, Lock, Users, LogIn, ChevronRight, Sparkles } from 'lucide-react';
 
-export default function RoomJoinScreen({ onJoin }) {
-  const [mode, setMode] = useState(null); // null | 'create' | 'join'
-  const [code, setCode] = useState('');
+export default function RoomJoinScreen({ onJoinMember, onJoinAdmin }) {
+  const [role, setRole] = useState('member'); // 'member' | 'admin'
   const [nickname, setNickname] = useState('');
-  const firebaseReady = isFirebaseConfigured();
+  const [inviteCode, setInviteCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleCreate = () => {
-    if (!nickname.trim()) return;
-    const roomCode = generateRoomCode();
-    onJoin(roomCode, nickname.trim(), true);
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!nickname.trim()) {
+      alert('이름을 입력해 주세요.');
+      return;
+    }
 
-  const handleJoin = () => {
-    if (!nickname.trim() || code.trim().length < 4) return;
-    onJoin(code.trim().toUpperCase(), nickname.trim(), false);
-  };
-
-  const handleOffline = () => {
-    onJoin('', nickname.trim() || '나', false);
+    setLoading(true);
+    try {
+      if (role === 'member') {
+        if (!inviteCode.trim()) {
+          alert('초대 코드를 입력해 주세요.');
+          setLoading(false);
+          return;
+        }
+        const success = await onJoinMember(nickname, inviteCode);
+        if (!success) setLoading(false);
+      } else {
+        if (!password) {
+          alert('비밀번호를 입력해 주세요.');
+          setLoading(false);
+          return;
+        }
+        const success = await onJoinAdmin(nickname, password);
+        if (!success) setLoading(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen min-h-dvh bg-white flex flex-col items-center justify-center px-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm"
+      >
         {/* Logo */}
-        <div className="text-center mb-10">
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.1 }}
-            className="w-20 h-20 bg-toss-blue rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-toss-blue/20">
-            <Plane className="w-10 h-10 text-white" />
+        <div className="text-center mb-9">
+          <motion.div 
+            initial={{ scale: 0 }} 
+            animate={{ scale: 1 }} 
+            transition={{ type: 'spring', delay: 0.1 }}
+            className="w-18 h-18 bg-toss-blue rounded-[24px] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-toss-blue/20"
+          >
+            <Plane className="w-9 h-9 text-white" />
           </motion.div>
-          <h1 className="text-[28px] font-extrabold text-toss-text-primary tracking-tight">TripSync</h1>
-          <p className="text-[14px] text-toss-text-secondary mt-1">함께 떠나는 유럽 여행 플래너</p>
+          <h1 className="text-[26px] font-extrabold text-toss-text-primary tracking-tight">TripSync</h1>
+          <p className="text-[13.5px] text-toss-text-secondary mt-1">유럽 여행 일정 실시간 동기화 플래너</p>
         </div>
 
-        {!mode ? (
-          /* Initial selection */
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-            className="space-y-3">
-            <div className="mb-4">
-              <label className="text-xs md:text-sm font-semibold text-toss-text-secondary mb-2 block">내 이름</label>
-              <input type="text" placeholder="닉네임을 입력하세요" value={nickname}
-                onChange={e => setNickname(e.target.value)}
-                className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-base" />
-            </div>
+        {/* Toss style card */}
+        <div className="bg-toss-bg/30 border border-toss-border/50 rounded-3xl p-5.5 shadow-sm mb-6">
+          <div className="flex gap-2.5 mb-5 p-1 bg-toss-bg rounded-xl">
+            <button
+              type="button"
+              onClick={() => { setRole('member'); setNickname(''); setInviteCode(''); setPassword(''); }}
+              className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all ${
+                role === 'member' 
+                  ? 'bg-white text-toss-blue shadow-sm' 
+                  : 'text-toss-text-secondary hover:text-toss-text-primary'
+              }`}
+            >
+              👤 멤버 로그인
+            </button>
+            <button
+              type="button"
+              onClick={() => { setRole('admin'); setNickname(''); setInviteCode(''); setPassword(''); }}
+              className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all ${
+                role === 'admin' 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-toss-text-secondary hover:text-toss-text-primary'
+              }`}
+            >
+              👑 관리자 로그인
+            </button>
+          </div>
 
-            {firebaseReady && (
-              <>
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => nickname.trim() ? setMode('create') : null}
-                  disabled={!nickname.trim()}
-                  className="w-full py-4 rounded-2xl bg-toss-blue text-white text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40">
-                  <Plus className="w-5 h-5" /> 새 여행 만들기
-                </motion.button>
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => nickname.trim() ? setMode('join') : null}
-                  disabled={!nickname.trim()}
-                  className="w-full py-4 rounded-2xl bg-toss-bg text-toss-text-primary text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40">
-                  <LogIn className="w-5 h-5" /> 초대 코드로 참여
-                </motion.button>
-              </>
-            )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <AnimatePresence mode="wait">
+              {role === 'member' ? (
+                <motion.div
+                  key="member"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="text-[12px] font-bold text-toss-text-secondary mb-1.5 block">내 이름</label>
+                    <input
+                      type="text"
+                      placeholder="이름을 입력해 주세요"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-toss-border/80 focus:border-toss-blue rounded-xl text-[14.5px] outline-none transition-all shadow-inner-sm"
+                      maxLength={10}
+                      required
+                    />
+                  </div>
 
-            <motion.button whileTap={{ scale: 0.97 }} onClick={handleOffline}
-              className="w-full py-4 rounded-2xl border border-toss-border text-toss-text-secondary text-sm font-medium flex items-center justify-center gap-2">
-              {firebaseReady ? <WifiOff className="w-4 h-4" /> : <Wifi className="w-4 h-4" />}
-              {firebaseReady ? '오프라인 모드 (혼자 쓰기)' : '시작하기'}
-            </motion.button>
+                  <div>
+                    <label className="text-[12px] font-bold text-toss-text-secondary mb-1.5 block">초대 코드</label>
+                    <input
+                      type="text"
+                      placeholder="6자리 코드 입력"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      maxLength={6}
+                      className="w-full px-4 py-3 bg-white border border-toss-border/80 focus:border-toss-blue rounded-xl text-[18px] font-bold tracking-[0.3em] text-center uppercase outline-none transition-all shadow-inner-sm"
+                      required
+                    />
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="admin"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="text-[12px] font-bold text-toss-text-secondary mb-1.5 block">관리자 이름</label>
+                    <input
+                      type="text"
+                      placeholder="이름을 입력해 주세요"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-toss-border/80 focus:border-indigo-500 rounded-xl text-[14.5px] outline-none transition-all shadow-inner-sm"
+                      maxLength={10}
+                      required
+                    />
+                  </div>
 
-            {!firebaseReady && (
-              <p className="text-xs text-toss-text-tertiary text-center mt-2 leading-relaxed">
-                실시간 공유를 사용하려면 .env 파일에<br/>Firebase 설정을 추가하세요
-              </p>
-            )}
-          </motion.div>
-        ) : mode === 'create' ? (
-          /* Create room */
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-            <div className="text-center mb-2">
-              <p className="text-base md:text-lg font-semibold text-toss-text-primary">새 여행을 만들까요?</p>
-              <p className="text-xs md:text-sm text-toss-text-secondary mt-1">초대 코드가 생성되어 팀원을 초대할 수 있어요</p>
-            </div>
-            <motion.button whileTap={{ scale: 0.97 }} onClick={handleCreate}
-              className="w-full py-4 rounded-2xl bg-toss-blue text-white text-base font-semibold">
-              여행 만들기 ✈️
+                  <div>
+                    <label className="text-[12px] font-bold text-toss-text-secondary mb-1.5 block">관리자 비밀번호</label>
+                    <input
+                      type="password"
+                      placeholder="관리자 비밀번호 입력"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-toss-border/80 focus:border-indigo-500 rounded-xl text-[14.5px] outline-none transition-all shadow-inner-sm"
+                      required
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              type="submit"
+              disabled={loading}
+              className={`w-full py-3.5 rounded-2xl text-[14.5px] font-bold text-white shadow-md flex items-center justify-center gap-1.5 transition-all ${
+                role === 'member' 
+                  ? 'bg-toss-blue hover:bg-toss-blue/95 shadow-toss-blue/10' 
+                  : 'bg-indigo-600 hover:bg-indigo-650 shadow-indigo-600/10'
+              } disabled:opacity-50`}
+            >
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <LogIn className="w-4.5 h-4.5" />
+                  {role === 'member' ? '여행 플래너 합류하기' : '관리자로 입장하기'}
+                </>
+              )}
             </motion.button>
-            <button onClick={() => setMode(null)}
-              className="w-full py-3 text-sm text-toss-text-secondary font-medium">뒤로</button>
-          </motion.div>
-        ) : (
-          /* Join room */
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-            <div>
-              <label className="text-xs md:text-sm font-semibold text-toss-text-secondary mb-2 block">초대 코드</label>
-              <input type="text" placeholder="6자리 코드 입력" value={code}
-                onChange={e => setCode(e.target.value.toUpperCase())} maxLength={6}
-                className="w-full px-4 py-3.5 bg-toss-bg rounded-2xl text-xl md:text-2xl font-bold text-center tracking-[0.3em]" autoFocus />
-            </div>
-            <motion.button whileTap={{ scale: 0.97 }} onClick={handleJoin}
-              disabled={code.trim().length < 4}
-              className="w-full py-4 rounded-2xl bg-toss-blue text-white text-[15px] font-semibold disabled:opacity-40">
-              참여하기
-            </motion.button>
-            <button onClick={() => setMode(null)}
-              className="w-full py-3 text-[14px] text-toss-text-secondary font-medium">뒤로</button>
-          </motion.div>
-        )}
+          </form>
+        </div>
+
+        {/* Small premium hint info */}
+        <div className="flex items-center gap-1.5 justify-center text-[11px] text-toss-text-tertiary">
+          <Sparkles className="w-3.5 h-3.5 text-toss-text-tertiary" />
+          <span>노트북, 컴퓨터 및 모바일 기기 모두 실시간 동기화 지원</span>
+        </div>
       </motion.div>
     </div>
   );

@@ -10,7 +10,7 @@ import MemoPage from './pages/MemoPage';
 import ChecklistPage from './pages/ChecklistPage';
 import RoomJoinScreen from './pages/RoomJoinScreen';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from './utils/storage';
-import { isFirebaseConfigured, saveRoomMeta } from './utils/firebase';
+import { isFirebaseConfigured, saveRoomMeta, getRoomMeta, generateRoomCode } from './utils/firebase';
 import { useSyncedList, useSyncedMeta } from './utils/useSync';
 
 const TABS = [
@@ -44,6 +44,9 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [initialExpandedDate, setInitialExpandedDate] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(() => loadFromStorage('tripsync_is_admin') || false);
+
+  const FIXED_ROOM_CODE = 'EUROPE_2026_MAIN';
 
   // Synced members list
   const { meta, updateMeta, isOnline } = useSyncedMeta(roomCode);
@@ -77,6 +80,14 @@ export default function App() {
     saveToStorage(STORAGE_KEYS.MEMO, newMemo);
   };
 
+  const handleGenerateInviteCode = async () => {
+    if (isOnline) {
+      const newCode = generateRoomCode();
+      await updateMeta({ inviteCode: newCode });
+      alert(`새 초대 코드가 생성되었습니다: ${newCode}`);
+    }
+  };
+
   // API key (still local per device)
   const [apiKey, setApiKey] = useState(() => {
     const envKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -89,22 +100,15 @@ export default function App() {
   useEffect(() => { saveToStorage(STORAGE_KEYS.SETTINGS, { apiKey }); }, [apiKey]);
 
   // Handle room join
-  const handleJoinRoom = async (code, name, isCreator) => {
+  const handleJoinRoom = (code, name, isCreator, adminFlag) => {
     setRoomCode(code);
     setNickname(name);
+    setIsAdmin(adminFlag);
     setJoined(true);
     saveToStorage('tripsync_room', code);
     saveToStorage('tripsync_nickname', name);
+    saveToStorage('tripsync_is_admin', adminFlag);
     saveToStorage('tripsync_joined', true);
-
-    // If creating a new online room, set initial members
-    if (isCreator && code && isFirebaseConfigured()) {
-      await saveRoomMeta(code, { members: [name], createdAt: Date.now(), createdBy: name });
-    }
-    // If joining an existing online room, add self to members
-    else if (!isCreator && code && isFirebaseConfigured()) {
-      // Will be merged via settings page
-    }
 
     // If offline, set local members
     if (!code) {
@@ -113,18 +117,85 @@ export default function App() {
     }
   };
 
+  // Member Login Verification
+  const handleJoinMember = async (name, enteredCode) => {
+    if (!isFirebaseConfigured()) {
+      handleJoinRoom(FIXED_ROOM_CODE, name, false, false);
+      return true;
+    }
+    try {
+      const metaData = await getRoomMeta(FIXED_ROOM_CODE);
+      if (!metaData || !metaData.inviteCode) {
+        alert("현재 생성된 활성 초대 코드가 없습니다. 관리자에게 초대 코드 생성을 요청하세요.");
+        return false;
+      }
+      if (metaData.inviteCode.toUpperCase() !== enteredCode.trim().toUpperCase()) {
+        alert("입력한 초대 코드가 올바르지 않습니다.");
+        return false;
+      }
+      
+      // Auto add member to list if not present
+      const currentMembers = metaData.members || [];
+      if (!currentMembers.includes(name.trim())) {
+        const newMembers = [...currentMembers, name.trim()];
+        await saveRoomMeta(FIXED_ROOM_CODE, { members: newMembers });
+      }
+
+      handleJoinRoom(FIXED_ROOM_CODE, name.trim(), false, false);
+      return true;
+    } catch (err) {
+      console.error(err);
+      alert("연결 중 오류가 발생했습니다. 네트워크 설정을 확인하세요.");
+      return false;
+    }
+  };
+
+  // Admin Login Verification
+  const handleJoinAdmin = async (name, password) => {
+    if (password !== '040831') {
+      alert("비밀번호가 일치하지 않습니다.");
+      return false;
+    }
+    if (isFirebaseConfigured()) {
+      try {
+        const metaData = await getRoomMeta(FIXED_ROOM_CODE);
+        const currentMembers = metaData?.members || [];
+        if (!currentMembers.includes(name.trim())) {
+          const newMembers = [...currentMembers, name.trim()];
+          await saveRoomMeta(FIXED_ROOM_CODE, { 
+            members: newMembers,
+            inviteCode: metaData?.inviteCode || generateRoomCode(),
+            createdAt: metaData?.createdAt || Date.now(),
+            createdBy: metaData?.createdBy || name.trim()
+          });
+        }
+      } catch (err) {
+        console.error("Admin init error:", err);
+      }
+    }
+    handleJoinRoom(FIXED_ROOM_CODE, name.trim(), true, true);
+    return true;
+  };
+
   const handleLeaveRoom = () => {
     setJoined(false);
     setRoomCode('');
     setNickname('');
+    setIsAdmin(false);
     saveToStorage('tripsync_room', '');
     saveToStorage('tripsync_nickname', '');
+    saveToStorage('tripsync_is_admin', false);
     saveToStorage('tripsync_joined', false);
   };
 
   // Show room join screen if not joined
   if (!joined) {
-    return <RoomJoinScreen onJoin={handleJoinRoom} />;
+    return (
+      <RoomJoinScreen 
+        onJoinMember={handleJoinMember} 
+        onJoinAdmin={handleJoinAdmin} 
+      />
+    );
   }
 
   const pageVariants = {
@@ -158,15 +229,35 @@ export default function App() {
 
           {/* Room Metadata */}
           {roomCode && (
-            <div className="p-3.5 bg-toss-bg rounded-2xl">
-              <p className="text-[11px] text-toss-text-secondary font-medium mb-1">초대 코드</p>
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-bold text-toss-blue tracking-wider font-mono">{roomCode}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${isOnline ? 'bg-green-50 text-toss-success' : 'bg-toss-text-tertiary text-white'}`}>
+            <div className="p-3.5 bg-toss-bg rounded-2xl space-y-2.5">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[11px] text-toss-text-secondary font-medium">초대 코드</p>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-toss-blue'}`}>
+                    {isAdmin ? '👑 관리자' : '👤 일반 멤버'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="text-lg font-bold text-toss-blue tracking-wider font-mono">
+                    {meta?.inviteCode || '------'}
+                  </span>
+                  {isAdmin && isOnline && (
+                    <motion.button 
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleGenerateInviteCode}
+                      className="text-[9.5px] font-bold bg-toss-blue text-white px-2 py-1 rounded-md shrink-0 hover:bg-toss-blue/90"
+                    >
+                      갱신
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t border-toss-border/50 pt-2 text-[11px]">
+                <span className="text-toss-text-tertiary">내 이름: <span className="font-semibold text-toss-text-secondary">{nickname}</span></span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${isOnline ? 'bg-green-50 text-toss-success' : 'bg-toss-text-tertiary text-white'}`}>
                   {isOnline ? '온라인' : '오프라인'}
                 </span>
               </div>
-              <p className="text-[11px] text-toss-text-tertiary mt-2">내 이름: <span className="font-semibold text-toss-text-secondary">{nickname}</span></p>
             </div>
           )}
 
@@ -259,6 +350,7 @@ export default function App() {
                   nickname={nickname}
                   isOnline={isOnline}
                   onLeave={handleLeaveRoom}
+                  isAdmin={isAdmin}
                 />
               )}
             </motion.div>

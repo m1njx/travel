@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Users, Key, Plus, Trash2, Info, Share2, Copy, LogOut, Wifi, WifiOff, Check, AlertCircle } from 'lucide-react';
 
 export default function SettingsPage({
-  members, setMembers, apiKey, setApiKey, isEnvKey, roomCode, nickname, isOnline, onLeave
+  members, setMembers, apiKey, setApiKey, isEnvKey, roomCode, nickname, isOnline, onLeave, isAdmin
 }) {
   const [newMember, setNewMember] = useState('');
   const [showApiInput, setShowApiInput] = useState(false);
@@ -11,12 +11,16 @@ export default function SettingsPage({
   const [copied, setCopied] = useState(false);
 
   const addMember = () => {
+    if (!isAdmin) return;
     const name = newMember.trim();
     if (!name || members.includes(name)) return;
     setMembers([...members, name]);
     setNewMember('');
   };
-  const removeMember = (m) => setMembers(members.filter(x => x !== m));
+  const removeMember = (m) => {
+    if (!isAdmin) return;
+    setMembers(members.filter(x => x !== m));
+  };
   const saveApiKey = () => { setApiKey(tempKey.trim()); setShowApiInput(false); };
 
   const copyCode = async () => {
@@ -122,22 +126,31 @@ export default function SettingsPage({
                     <span className="text-[13px] sm:text-[14px] font-medium text-toss-text-primary">{m}</span>
                     {m === nickname && <span className="text-[9px] text-toss-blue bg-toss-blue-light px-1.5 py-0.5 rounded-full">나</span>}
                   </div>
-                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => removeMember(m)} className="p-1.5 rounded-full hover:bg-red-50 btn-icon-sm">
-                    <Trash2 className="w-4 h-4 text-toss-text-tertiary" />
-                  </motion.button>
+                  {isAdmin && (
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => removeMember(m)} className="p-1.5 rounded-full hover:bg-red-50 btn-icon-sm">
+                      <Trash2 className="w-4 h-4 text-toss-text-tertiary" />
+                    </motion.button>
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
-          <div className="flex gap-2">
-            <input type="text" placeholder="팀원 이름" value={newMember} onChange={e => setNewMember(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addMember()}
-              className="flex-1 px-4 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0" />
-            <motion.button whileTap={{ scale: 0.95 }} onClick={addMember}
-              className="px-4 py-2.5 bg-toss-blue rounded-xl text-white text-[14px] font-semibold flex items-center gap-1">
-              <Plus className="w-4 h-4" />추가
-            </motion.button>
-          </div>
+          {isAdmin ? (
+            <div className="flex gap-2">
+              <input type="text" placeholder="팀원 이름" value={newMember} onChange={e => setNewMember(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addMember()}
+                className="flex-1 px-4 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0" />
+              <motion.button whileTap={{ scale: 0.95 }} onClick={addMember}
+                className="px-4 py-2.5 bg-toss-blue rounded-xl text-white text-[14px] font-semibold flex items-center gap-1">
+                <Plus className="w-4 h-4" />추가
+              </motion.button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 p-3 bg-toss-bg rounded-xl text-toss-text-secondary text-[12.5px] border border-toss-border/40">
+              <AlertCircle className="w-4 h-4 text-toss-text-tertiary flex-shrink-0" />
+              <span>팀원 추가 및 삭제 권한은 관리자에게만 있습니다.</span>
+            </div>
+          )}
         </motion.div>
 
         {/* API Settings Section */}
