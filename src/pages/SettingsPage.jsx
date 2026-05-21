@@ -230,12 +230,12 @@ export default function SettingsPage({
             </div>
             
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input type="text" placeholder="이름" value={newMemberName} onChange={e => setNewMemberName(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-toss-bg rounded-xl text-[13px] border-0 outline-none" />
+                  className="flex-1 px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 outline-none" />
                 <input type="text" placeholder="초대 코드 (6자리)" value={newMemberCode} onChange={e => setNewMemberCode(e.target.value.toUpperCase())}
                   maxLength={6}
-                  className="w-[140px] px-3 py-2 bg-toss-bg rounded-xl text-[13px] border-0 text-center font-bold tracking-wider uppercase outline-none" />
+                  className="w-full sm:w-[140px] px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 text-left sm:text-center font-bold tracking-wider uppercase outline-none" />
               </div>
               <motion.button whileTap={{ scale: 0.95 }} onClick={addMember}
                 className="w-full py-2.5 bg-toss-blue rounded-xl text-white text-[13px] font-semibold flex items-center justify-center gap-1 shadow-sm shadow-toss-blue/10">
