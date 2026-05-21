@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Wallet, TrendingUp, RefreshCw, Clock, ArrowRightLeft, Camera, Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
 import { fetchExchangeRates, convertToKRW, formatKRW, getCurrencySymbol, formatRateTime, CURRENCIES } from '../utils/exchangeRate';
@@ -12,6 +12,7 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
   const [lastUpdated, setLastUpdated] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedDateKey, setSelectedDateKey] = useState('all');
 
   const loadRates = async (force = false) => {
     setLoading(true);
@@ -65,10 +66,78 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
     }
   };
 
-  const totalKRW = expenses.reduce((a, e) => {
-    const r = e.rateSnapshot || rates;
-    return a + (r ? convertToKRW(e.amount, e.currency, r) : 0);
-  }, 0);
+  const dateOptions = useMemo(() => {
+    const datesMap = {};
+    expenses.forEach(e => {
+      const dateObj = new Date(e.createdAt);
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const key = `${y}-${m}-${d}`;
+      const label = dateObj.toLocaleDateString('ko-KR', {
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short'
+      });
+      datesMap[key] = label;
+    });
+    const sortedKeys = Object.keys(datesMap).sort((a, b) => b.localeCompare(a));
+    return [
+      { key: 'all', label: '전체 내역' },
+      ...sortedKeys.map(k => ({ key: k, label: datesMap[k] }))
+    ];
+  }, [expenses]);
+
+  const filteredExpenses = useMemo(() => {
+    if (selectedDateKey === 'all') return expenses;
+    return expenses.filter(e => {
+      const dateObj = new Date(e.createdAt);
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const key = `${y}-${m}-${d}`;
+      return key === selectedDateKey;
+    });
+  }, [expenses, selectedDateKey]);
+
+  const totalKRW = useMemo(() => {
+    return filteredExpenses.reduce((a, e) => {
+      const r = e.rateSnapshot || rates;
+      return a + (r ? convertToKRW(e.amount, e.currency, r) : 0);
+    }, 0);
+  }, [filteredExpenses, rates]);
+
+  const groupedExpenses = useMemo(() => {
+    const groups = {};
+    filteredExpenses.forEach(e => {
+      const dateObj = new Date(e.createdAt);
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const key = `${y}-${m}-${d}`;
+      const label = dateObj.toLocaleDateString('ko-KR', {
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short'
+      });
+      if (!groups[key]) {
+        groups[key] = { label, items: [], total: 0 };
+      }
+      groups[key].items.push(e);
+      
+      const r = e.rateSnapshot || rates;
+      const krw = r ? convertToKRW(e.amount, e.currency, r) : 0;
+      groups[key].total += krw;
+    });
+    return Object.keys(groups)
+      .sort((a, b) => b.localeCompare(a))
+      .map(key => ({
+        key,
+        label: groups[key].label,
+        items: groups[key].items,
+        total: groups[key].total
+      }));
+  }, [filteredExpenses, rates]);
 
   return (
     <div className="pb-6">
@@ -132,55 +201,87 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
           )}
         </div>
 
-        {/* Expense List */}
+        {/* 📅 Desktop Date Selector Bar */}
+        <div className="mx-4 sm:mx-5 mb-5 overflow-x-auto scrollbar-hide flex gap-2 border-b border-toss-border pb-3">
+          {dateOptions.map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setSelectedDateKey(opt.key)}
+              className={`px-4 py-2 text-[13px] font-bold rounded-full transition-all shrink-0 ${
+                selectedDateKey === opt.key
+                  ? 'bg-toss-blue text-white shadow-sm'
+                  : 'bg-white border border-toss-border text-toss-text-secondary hover:bg-toss-bg'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Expense List (Grouped by Date) */}
         <div className="px-4 sm:px-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[15px] sm:text-[16px] font-bold text-toss-text-primary">지출 내역</span>
-            <span className="text-[13px] text-toss-text-secondary">{expenses.length}건</span>
+            <span className="text-[13px] text-toss-text-secondary">{filteredExpenses.length}건 · ₩{formatKRW(totalKRW)}</span>
           </div>
-          
-          <div className="space-y-2.5">
+
+          <div className="space-y-5">
             <AnimatePresence mode="popLayout">
-              {expenses.map((e, i) => {
-                const expRate = e.rateSnapshot || rates;
-                const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
-                return (
-                  <motion.div key={e.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }}
-                    transition={{ delay: i * 0.03 }} className="toss-card hover:shadow-md transition-shadow duration-200">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-toss-blue-light rounded-xl flex items-center justify-center flex-shrink-0">
-                        <span className="text-[14px] sm:text-[16px]">{getCategoryEmoji(e.category)}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] sm:text-[14px] font-semibold text-toss-text-primary truncate">{e.description}</p>
-                        <p className="text-[11px] sm:text-[12px] text-toss-text-secondary">{e.paidBy} • {getCategoryLabel(e.category)}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-[13px] sm:text-[14px] font-bold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
-                        <p className="text-[10px] sm:text-[11px] text-toss-text-secondary tabular-nums">₩{formatKRW(krw)}</p>
-                      </div>
-                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleRemove(e.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
-                        <X className="w-3.5 h-3.5 text-toss-text-tertiary" />
-                      </motion.button>
+              {groupedExpenses.map(group => (
+                <motion.div key={group.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  {/* Date subheader */}
+                  {selectedDateKey === 'all' && (
+                    <div className="flex items-center justify-between mb-2.5 px-1">
+                      <span className="text-[12px] font-extrabold text-toss-text-secondary tracking-wide uppercase">{group.label}</span>
+                      <span className="text-[12px] font-bold text-toss-blue bg-toss-blue-light px-2.5 py-1 rounded-full">₩{formatKRW(group.total)}</span>
                     </div>
-                    <div className="mt-1.5 flex items-center gap-1 pl-11 sm:pl-13">
-                      <Clock className="w-3 h-3 text-toss-text-tertiary" />
-                      <span className="text-[9px] sm:text-[10px] text-toss-text-tertiary">
-                        {formatRateTime(e.rateSnapshotTime || e.createdAt)} 환율
-                        {expRate && e.currency && ` · 1${e.currency}=₩${formatKRW(expRate[e.currency] || 0)}`}
-                      </span>
-                    </div>
-                  </motion.div>
-                );
-              })}
+                  )}
+                  <div className="space-y-2.5">
+                    {group.items.map((e, i) => {
+                      const expRate = e.rateSnapshot || rates;
+                      const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
+                      return (
+                        <motion.div key={e.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }}
+                          transition={{ delay: i * 0.03 }} className="toss-card hover:shadow-md transition-shadow duration-200">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-toss-blue-light rounded-xl flex items-center justify-center flex-shrink-0">
+                              <span className="text-[14px] sm:text-[16px]">{getCategoryEmoji(e.category)}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] sm:text-[14px] font-semibold text-toss-text-primary truncate">{e.description}</p>
+                              <p className="text-[11px] sm:text-[12px] text-toss-text-secondary">{e.paidBy} • {getCategoryLabel(e.category)}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-[13px] sm:text-[14px] font-bold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
+                              <p className="text-[10px] sm:text-[11px] text-toss-text-secondary tabular-nums">₩{formatKRW(krw)}</p>
+                            </div>
+                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleRemove(e.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
+                              <X className="w-3.5 h-3.5 text-toss-text-tertiary" />
+                            </motion.button>
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-1 pl-11 sm:pl-13">
+                            <Clock className="w-3 h-3 text-toss-text-tertiary" />
+                            <span className="text-[9px] sm:text-[10px] text-toss-text-tertiary">
+                              {formatRateTime(e.rateSnapshotTime || e.createdAt)} 환율
+                              {expRate && e.currency && ` · 1${e.currency}=₩${formatKRW(expRate[e.currency] || 0)}`}
+                            </span>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              ))}
             </AnimatePresence>
 
-            {expenses.length === 0 && (
+            {filteredExpenses.length === 0 && (
               <div className="flex flex-col items-center py-16 bg-white rounded-2xl border border-toss-border/60">
                 <div className="w-16 h-16 bg-toss-blue-light rounded-full flex items-center justify-center mb-4">
                   <TrendingUp className="w-8 h-8 text-toss-blue" />
                 </div>
-                <p className="text-[16px] font-semibold text-toss-text-primary mb-1">지출 내역이 없어요</p>
+                <p className="text-[16px] font-semibold text-toss-text-primary mb-1">
+                  {selectedDateKey === 'all' ? '지출 내역이 없어요' : '이 날짜에 지출 내역이 없어요'}
+                </p>
                 <p className="text-[14px] text-toss-text-secondary">첫 지출을 추가하고 함께 정산해 보세요</p>
               </div>
             )}
@@ -191,7 +292,7 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
       {/* ==================== MOBILE UI ==================== */}
       <div className="block md:hidden -mx-4 -mt-6 pb-12 bg-slate-50 min-h-screen">
         {/* Mobile Header Banner */}
-        <div className="bg-gradient-to-b from-toss-blue via-toss-blue to-indigo-650 text-white pt-6 pb-8 px-5 rounded-b-[36px] shadow-lg shadow-toss-blue/15 relative overflow-hidden flex flex-col gap-4">
+        <div className="bg-gradient-to-b from-toss-blue via-toss-blue to-indigo-650 text-white pt-6 pb-6 px-5 rounded-b-[36px] shadow-lg shadow-toss-blue/15 relative overflow-hidden flex flex-col gap-4">
           <div className="absolute right-[-20px] bottom-[-20px] opacity-10 pointer-events-none">
             <Wallet className="w-40 h-40 rotate-12" />
           </div>
@@ -201,6 +302,23 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
             <p className="text-[12.5px] font-semibold text-white/80">
               우리 팀의 실시간 경비 내역을 기록하고 확인하세요.
             </p>
+          </div>
+
+          {/* 📅 Mobile Date Selector inside header */}
+          <div className="relative z-10 flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            {dateOptions.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setSelectedDateKey(opt.key)}
+                className={`px-4 py-1.5 text-[12px] font-bold rounded-full transition-all shrink-0 ${
+                  selectedDateKey === opt.key
+                    ? 'bg-white text-toss-blue shadow-md'
+                    : 'bg-white/15 text-white/90 border border-white/20 backdrop-blur-sm'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -231,57 +349,72 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
           </div>
         )}
 
-        {/* Premium Expense list */}
+        {/* Premium Expense list — Grouped by date */}
         <div className="mx-5 mt-6">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[13px] font-extrabold text-toss-text-secondary">지출 기록 내역</span>
-            <span className="text-[13px] font-extrabold text-toss-blue">{expenses.length}건</span>
+            <span className="text-[13px] font-extrabold text-toss-blue">{filteredExpenses.length}건 · ₩{formatKRW(totalKRW)}</span>
           </div>
 
-          <div className="space-y-3">
-            {expenses.map((e, idx) => {
-              const expRate = e.rateSnapshot || rates;
-              const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
-              return (
-                <div key={e.id} className="bg-white rounded-2xl p-4 border border-toss-border/55 shadow-sm relative overflow-hidden flex flex-col gap-2.5">
-                  {/* Header portion */}
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-toss-blue/5 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-[16px]">{getCategoryEmoji(e.category)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13.5px] font-extrabold text-toss-text-primary leading-snug break-all">{e.description}</p>
-                      <p className="text-[11.5px] text-toss-text-secondary font-semibold mt-0.5">{e.paidBy} • {getCategoryLabel(e.category)}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[14px] font-extrabold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
-                      <p className="text-[11px] text-toss-text-secondary font-semibold mt-0.5 tabular-nums">₩{formatKRW(krw)}</p>
-                    </div>
+          <div className="space-y-5">
+            {groupedExpenses.map(group => (
+              <div key={group.key}>
+                {/* Date group subheader */}
+                {selectedDateKey === 'all' && (
+                  <div className="flex items-center justify-between mb-2.5 px-1">
+                    <span className="text-[11.5px] font-extrabold text-toss-text-secondary tracking-wide">{group.label}</span>
+                    <span className="text-[11.5px] font-extrabold text-toss-blue bg-toss-blue-light px-2.5 py-1 rounded-full">₩{formatKRW(group.total)}</span>
                   </div>
+                )}
+                <div className="space-y-3">
+                  {group.items.map((e) => {
+                    const expRate = e.rateSnapshot || rates;
+                    const krw = expRate ? convertToKRW(e.amount, e.currency, expRate) : 0;
+                    return (
+                      <div key={e.id} className="bg-white rounded-2xl p-4 border border-toss-border/55 shadow-sm relative overflow-hidden flex flex-col gap-2.5">
+                        {/* Header portion */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-toss-blue/5 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-[16px]">{getCategoryEmoji(e.category)}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13.5px] font-extrabold text-toss-text-primary leading-snug break-all">{e.description}</p>
+                            <p className="text-[11.5px] text-toss-text-secondary font-semibold mt-0.5">{e.paidBy} • {getCategoryLabel(e.category)}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[14px] font-extrabold text-toss-text-primary tabular-nums">{getCurrencySymbol(e.currency)}{e.amount.toLocaleString()}</p>
+                            <p className="text-[11px] text-toss-text-secondary font-semibold mt-0.5 tabular-nums">₩{formatKRW(krw)}</p>
+                          </div>
+                        </div>
 
-                  {/* Bottom details portion */}
-                  <div className="flex items-center justify-between pt-2 border-t border-toss-border/30">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-toss-text-tertiary" />
-                      <span className="text-[10px] text-toss-text-tertiary font-medium">
-                        {formatRateTime(e.rateSnapshotTime || e.createdAt)} 기준 (1{e.currency}=₩{formatKRW(expRate ? expRate[e.currency] : 0)})
-                      </span>
-                    </div>
+                        {/* Bottom details portion */}
+                        <div className="flex items-center justify-between pt-2 border-t border-toss-border/30">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-toss-text-tertiary" />
+                            <span className="text-[10px] text-toss-text-tertiary font-medium">
+                              {formatRateTime(e.rateSnapshotTime || e.createdAt)} 기준 (1{e.currency}=₩{formatKRW(expRate ? expRate[e.currency] : 0)})
+                            </span>
+                          </div>
 
-                    <button onClick={() => handleRemove(e.id)} className="px-2 py-1 bg-red-50 text-[10px] font-bold text-toss-danger rounded-lg active:scale-95">
-                      삭제
-                    </button>
-                  </div>
+                          <button onClick={() => handleRemove(e.id)} className="px-2 py-1 bg-red-50 text-[10px] font-bold text-toss-danger rounded-lg active:scale-95">
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
 
-            {expenses.length === 0 && (
+            {filteredExpenses.length === 0 && (
               <div className="flex flex-col items-center py-16 bg-white rounded-2xl border border-toss-border/50 text-center">
                 <div className="w-14 h-14 bg-toss-blue-light rounded-full flex items-center justify-center mb-3">
                   <TrendingUp className="w-7 h-7 text-toss-blue" />
                 </div>
-                <p className="text-[15px] font-bold text-toss-text-primary mb-0.5">지출 기록이 없습니다</p>
+                <p className="text-[15px] font-bold text-toss-text-primary mb-0.5">
+                  {selectedDateKey === 'all' ? '지출 기록이 없습니다' : '이 날짜에 지출이 없습니다'}
+                </p>
                 <p className="text-[12.5px] text-toss-text-secondary">첫 지출을 추가하고 함께 정산해보세요</p>
               </div>
             )}
