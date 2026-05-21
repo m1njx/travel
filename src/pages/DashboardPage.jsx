@@ -584,9 +584,9 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             </h3>
 
             {activeTimeline && activeTimeline.schedule.places?.length > 0 ? (
-              <div className="relative pl-6 space-y-4 max-h-[300px] overflow-y-auto pr-1">
+              <div className="relative pl-7 space-y-4 max-h-[300px] overflow-y-auto pr-1">
                 {/* Timeline vertical rule */}
-                <div className="absolute left-[9.5px] top-2 bottom-6 w-0.5 bg-toss-border/80 border-dashed border-l" />
+                <div className="absolute left-[18px] top-2 bottom-6 w-0.5 bg-toss-border/80 border-dashed border-l" />
 
                 {[...activeTimeline.schedule.places]
                   .sort((a, b) => {
@@ -598,7 +598,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                   .map((place, idx) => (
                     <div key={place.id} className="relative flex gap-3 group">
                       {/* Timeline Dot */}
-                      <div className="absolute -left-[22px] top-1 z-10 shrink-0">
+                      <div className="absolute -left-[20px] top-1 z-10 shrink-0">
                         <button
                           onClick={() => {
                             const updatedPlaces = activeTimeline.schedule.places.map(p => 
@@ -606,7 +606,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                             );
                             schedulesSync.updateItem({ ...activeTimeline.schedule, places: updatedPlaces });
                           }}
-                          className="w-5 h-5 bg-white border-2 border-toss-blue rounded-full flex items-center justify-center shadow-sm text-toss-blue hover:bg-toss-blue-light transition-all active:scale-90"
+                          className="w-5 h-5 min-w-[20px] min-h-[20px] bg-white border-2 border-toss-blue rounded-full flex items-center justify-center shadow-sm text-toss-blue hover:bg-toss-blue-light transition-all active:scale-90"
                         >
                           {place.completed ? (
                             <div className="w-2.5 h-2.5 bg-toss-blue rounded-full" />

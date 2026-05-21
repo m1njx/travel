@@ -290,10 +290,10 @@ function AmPmDropdown({ value, onChange, isOpen, onToggle, dropdownId }) {
           e.stopPropagation();
           onToggle(isOpen ? null : dropdownId);
         }}
-        className="px-2 py-1 bg-toss-bg hover:bg-toss-border/40 rounded-lg text-[12px] font-bold text-toss-text-primary flex items-center gap-1 transition-all active:scale-95 animate-fade-in"
+        className="px-1.5 py-0.5 min-w-0 min-h-0 bg-transparent hover:bg-toss-bg/85 rounded text-[13px] font-extrabold text-toss-text-primary flex items-center gap-0.5 transition-all active:scale-95 animate-fade-in"
       >
         <span>{value}</span>
-        <ChevronDown className="w-3 h-3 text-toss-text-secondary shrink-0" />
+        <ChevronDown className="w-3 h-3 text-toss-text-secondary shrink-0 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} />
       </button>
 
       <AnimatePresence>
@@ -387,50 +387,54 @@ function TimeInputGroup({ label, value, onChange, onClear, dropdownId, activeDro
     }
   };
 
+  const isDropdownOpen = activeDropdown === dropdownId;
+
   return (
-    <div className="flex items-center justify-between gap-1 w-full bg-white px-3 py-1.5 rounded-xl border border-toss-border focus-within:border-toss-blue focus-within:ring-[1px] focus-within:ring-toss-blue transition-all h-[38px] shadow-sm animate-fade-in">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
+    <div className={`flex items-center justify-between gap-1 w-full bg-white px-3 py-1.5 rounded-xl border transition-all h-[38px] shadow-sm animate-fade-in ${isDropdownOpen ? 'border-toss-blue ring-[1px] ring-toss-blue' : 'border-toss-border focus-within:border-toss-blue focus-within:ring-[1px] focus-within:ring-toss-blue'}`}>
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
         <span className="text-[11px] text-toss-text-secondary font-semibold whitespace-nowrap shrink-0">{label}</span>
         <div className="h-3 w-[1px] bg-toss-border shrink-0 mx-0.5" />
-        <AmPmDropdown 
-          value={parsed.ampm} 
-          onChange={handleAmPmChange} 
-          isOpen={activeDropdown === dropdownId}
-          onToggle={onToggleDropdown}
-          dropdownId={dropdownId}
-        />
-        <div className="flex items-center justify-center min-w-0 flex-1 gap-1">
-          <input 
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={2}
-            placeholder="09"
-            value={localHour}
-            onChange={handleHourChange}
-            onBlur={handleHourBlur}
-            onKeyDown={handleKeyDown}
-            className="w-6 text-center font-bold text-[13px] text-toss-text-primary bg-transparent border-0 p-0 focus:ring-0 outline-none select-all"
+        <div className="flex items-center gap-1 min-w-0 flex-1 pl-0.5">
+          <AmPmDropdown 
+            value={parsed.ampm} 
+            onChange={handleAmPmChange} 
+            isOpen={isDropdownOpen}
+            onToggle={onToggleDropdown}
+            dropdownId={dropdownId}
           />
-          <span className="text-[12px] text-toss-text-tertiary font-bold shrink-0">:</span>
-          <input 
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={2}
-            placeholder="00"
-            value={localMin}
-            onChange={handleMinChange}
-            onBlur={handleMinBlur}
-            onKeyDown={handleKeyDown}
-            className="w-6 text-center font-bold text-[13px] text-toss-text-primary bg-transparent border-0 p-0 focus:ring-0 outline-none select-all"
-          />
+          <div className="flex items-center gap-0.5 text-toss-text-primary">
+            <input 
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={2}
+              placeholder="09"
+              value={localHour}
+              onChange={handleHourChange}
+              onBlur={handleHourBlur}
+              onKeyDown={handleKeyDown}
+              className="w-[20px] text-center font-extrabold text-[13px] text-toss-text-primary bg-transparent border-0 p-0 focus:ring-0 outline-none select-all"
+            />
+            <span className="text-[12px] text-toss-text-tertiary font-bold shrink-0 mx-0.5">:</span>
+            <input 
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={2}
+              placeholder="00"
+              value={localMin}
+              onChange={handleMinChange}
+              onBlur={handleMinBlur}
+              onKeyDown={handleKeyDown}
+              className="w-[20px] text-center font-extrabold text-[13px] text-toss-text-primary bg-transparent border-0 p-0 focus:ring-0 outline-none select-all"
+            />
+          </div>
         </div>
       </div>
       <button 
         type="button" 
         onClick={onClear} 
-        className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5 transition-colors" 
+        className="text-toss-text-tertiary hover:text-toss-text-secondary shrink-0 p-0.5 transition-colors btn-icon-sm" 
         title="시간 제거"
       >
         <X className="w-3.5 h-3.5" />
