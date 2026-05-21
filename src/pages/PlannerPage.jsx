@@ -6,7 +6,7 @@ import { optimizeScheduleWithGemini } from '../utils/gemini';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-export default function PlannerPage({ sync, nickname, apiKey }) {
+export default function PlannerPage({ sync, nickname, apiKey, initialExpandedDate, clearInitialExpandedDate }) {
   const { items: schedules, addItem, updateItem, removeItem } = sync;
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -19,6 +19,21 @@ export default function PlannerPage({ sync, nickname, apiKey }) {
   
   // Track which dates are expanded
   const [expandedDates, setExpandedDates] = useState([]);
+
+  useEffect(() => {
+    if (initialExpandedDate) {
+      setExpandedDates(prev => prev.includes(initialExpandedDate) ? prev : [...prev, initialExpandedDate]);
+      setTimeout(() => {
+        const el = document.getElementById(`date-section-${initialExpandedDate}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 300);
+      if (clearInitialExpandedDate) {
+        clearInitialExpandedDate();
+      }
+    }
+  }, [initialExpandedDate]);
 
   const handleAdd = async (s) => {
     let formattedUrl = s.url?.trim() || '';
@@ -160,7 +175,7 @@ export default function PlannerPage({ sync, nickname, apiKey }) {
           const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
 
           return (
-            <div key={dateStr} className="bg-white rounded-2xl border border-toss-border overflow-hidden shadow-sm">
+            <div key={dateStr} id={`date-section-${dateStr}`} className="bg-white rounded-2xl border border-toss-border overflow-hidden shadow-sm scroll-mt-6">
               {/* Date Header Accordion Trigger */}
               <button
                 onClick={() => toggleDateExpand(dateStr)}

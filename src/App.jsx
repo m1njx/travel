@@ -43,6 +43,7 @@ export default function App() {
   const [joined, setJoined] = useState(() => !!loadFromStorage('tripsync_joined'));
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [initialExpandedDate, setInitialExpandedDate] = useState(null);
 
   // Synced members list
   const { meta, updateMeta, isOnline } = useSyncedMeta(roomCode);
@@ -220,10 +221,20 @@ export default function App() {
                   members={members}
                   nickname={nickname}
                   apiKey={apiKey}
+                  onNavigateToSchedule={(date) => {
+                    setInitialExpandedDate(date);
+                    setActiveTab('planner');
+                  }}
                 />
               )}
               {activeTab === 'planner' && (
-                <PlannerPage sync={schedulesSync} nickname={nickname} apiKey={apiKey} />
+                <PlannerPage
+                  sync={schedulesSync}
+                  nickname={nickname}
+                  apiKey={apiKey}
+                  initialExpandedDate={initialExpandedDate}
+                  clearInitialExpandedDate={() => setInitialExpandedDate(null)}
+                />
               )}
               {activeTab === 'expense' && (
                 <ExpensePage members={members} sync={expensesSync} apiKey={apiKey} />

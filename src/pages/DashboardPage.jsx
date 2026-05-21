@@ -51,7 +51,7 @@ const DEFAULT_TIPS = [
   "⏰ 유레일패스나 미술관 패스 등은 첫 사용 개시일(Validation) 오전 일찍 시작해야 하루 치 기간을 온전히 절약할 수 있습니다."
 ];
 
-export default function DashboardPage({ schedulesSync, checklistsSync, expensesSync, members, nickname, apiKey }) {
+export default function DashboardPage({ schedulesSync, checklistsSync, expensesSync, members, nickname, apiKey, onNavigateToSchedule }) {
   const schedules = schedulesSync?.items || [];
   const checklists = checklistsSync?.items || [];
   const expenses = expensesSync?.items || [];
@@ -579,7 +579,14 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           className="toss-card md:col-span-7 flex flex-col justify-between"
         >
           <div>
-            <h3 className="text-[15px] font-bold text-toss-text-primary mb-4 flex items-center gap-1.5">
+            <h3 
+              onClick={() => {
+                if (activeTimeline && onNavigateToSchedule) {
+                  onNavigateToSchedule(activeTimeline.schedule.date);
+                }
+              }}
+              className={`text-[15px] font-bold text-toss-text-primary mb-4 flex items-center gap-1.5 ${activeTimeline ? 'cursor-pointer hover:text-toss-blue transition-colors' : ''}`}
+            >
               <span>🗺️</span> {activeTimeline ? activeTimeline.label : '일정 타임라인'}
             </h3>
 
@@ -600,7 +607,9 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                       {/* Timeline Dot */}
                       <div className="absolute -left-[20px] top-1 z-10 shrink-0">
                         <button
-                          onClick={() => {
+                          style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const updatedPlaces = activeTimeline.schedule.places.map(p => 
                               p.id === place.id ? { ...p, completed: !p.completed } : p
                             );
@@ -616,7 +625,14 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                         </button>
                       </div>
 
-                      <div className="flex-1 min-w-0 bg-toss-bg/30 group-hover:bg-toss-bg/60 p-2.5 rounded-xl transition-all border border-transparent hover:border-toss-border/40">
+                      <div 
+                        onClick={() => {
+                          if (activeTimeline && onNavigateToSchedule) {
+                            onNavigateToSchedule(activeTimeline.schedule.date);
+                          }
+                        }}
+                        className="flex-1 min-w-0 bg-toss-bg/30 group-hover:bg-toss-bg/60 p-2.5 rounded-xl transition-all border border-transparent hover:border-toss-blue/20 cursor-pointer active:opacity-90 active:scale-[0.99]"
+                      >
                         <div className="flex items-center gap-2 flex-wrap">
                           {place.time && (
                             <span className="text-[9.5px] font-bold bg-toss-blue/10 text-toss-blue px-1.5 py-0.5 rounded">
@@ -624,7 +640,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                             </span>
                           )}
                           <p className={`text-[12.5px] font-bold ${place.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
-                            {place.name}
+                             {place.name}
                           </p>
                         </div>
                         {place.memo && (
@@ -647,12 +663,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             )}
           </div>
 
-          {activeTimeline && (
-            <div className="border-t border-toss-border/50 pt-3 mt-4 flex justify-between items-center text-[11px] text-toss-blue font-bold shrink-0">
-              <span>{activeTimeline.schedule.title} 전체 일정 코스</span>
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          )}
+          {/* Footer removed */}
         </motion.div>
 
         {/* Right Side (5/12 col): Premium Dynamic AI Recommendation Tips Card */}
