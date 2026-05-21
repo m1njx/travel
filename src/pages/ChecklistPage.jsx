@@ -219,7 +219,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
                   whileTap={{ scale: 0.95 }}
                   onClick={handleAddPack}
                   disabled={!newPackName.trim()}
-                  className="px-5 py-3 bg-toss-blue rounded-xl text-white text-[14px] font-semibold flex items-center gap-1.5 disabled:opacity-40"
+                  className="px-5 py-3 bg-toss-blue rounded-xl text-white text-[14px] font-semibold flex items-center gap-1.5 disabled:opacity-40 shrink-0 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" /> 등록
                 </motion.button>
@@ -356,7 +356,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAddPack}
                 disabled={!newPackName.trim()}
-                className="px-5 py-3 bg-[#2563eb] text-white text-[14px] font-extrabold rounded-2xl flex items-center gap-1 shadow-md shadow-blue-100 disabled:opacity-40 disabled:shadow-none"
+                className="px-5 py-3 bg-[#2563eb] text-white text-[14px] font-extrabold rounded-2xl flex items-center gap-1 shadow-md shadow-blue-100 disabled:opacity-40 disabled:shadow-none shrink-0 whitespace-nowrap"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" /> 등록
               </motion.button>
