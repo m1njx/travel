@@ -337,9 +337,6 @@ Example response format:
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ googleSearch: {} }], // Enable Search Grounding!
-          generationConfig: {
-            responseMimeType: 'application/json',
-          },
         }),
       });
 
