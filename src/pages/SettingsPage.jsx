@@ -278,32 +278,18 @@ export default function SettingsPage({
             </div>
           </div>
 
-          {roomCode && (
+          {!isAdmin && roomCode && (
             <div className="flex-[2] px-4 py-3.5 bg-toss-bg rounded-2xl">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <p className="text-[12px] text-toss-text-secondary">
-                    {isAdmin ? '방 초대 코드' : '내 초대 코드'}
-                  </p>
+                  <p className="text-[12px] text-toss-text-secondary">내 초대 코드</p>
                   <p className="text-[20px] sm:text-[24px] font-extrabold text-toss-blue tracking-[0.2em] mt-0.5 tabular-nums">
-                    {isAdmin ? roomCode : (() => {
+                    {(() => {
                       const me = members.find(m => typeof m === 'object' && m.name === nickname);
                       return me?.inviteCode || '------';
                     })()}
                   </p>
                 </div>
-                {isAdmin && (
-                  <div className="flex gap-1.5 ml-auto">
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={copyCode}
-                      className="p-2.5 rounded-xl bg-white border border-toss-border btn-icon-sm">
-                      {copied ? <Check className="w-4 h-4 text-toss-success" /> : <Copy className="w-4 h-4 text-toss-text-secondary" />}
-                    </motion.button>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={shareCode}
-                      className="p-2.5 rounded-xl bg-toss-blue btn-icon-sm">
-                      <Share2 className="w-4 h-4 text-white" />
-                    </motion.button>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -312,7 +298,7 @@ export default function SettingsPage({
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 pt-2">
           <p className="text-[11px] sm:text-[12px] text-toss-text-tertiary">
             {isAdmin 
-              ? '이 방 초대 코드를 관리자에 등록하여 팀원을 추가할 수 있습니다.' 
+              ? '실시간 공유 모드로 팀원들과 일정을 실시간으로 공유하고 관리합니다.' 
               : '개인 초대 코드를 통해 로그인하여 개인 및 공통 데이터에 안전하게 접근할 수 있습니다.'}
           </p>
           <motion.button whileTap={{ scale: 0.97 }} onClick={onLeave}
@@ -557,7 +543,7 @@ export default function SettingsPage({
                   className="flex-1 px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
                 <input type="text" placeholder="초대 코드 (6자리)" value={newMemberCode} onChange={e => setNewMemberCode(e.target.value.toUpperCase())}
                   maxLength={6}
-                  className="w-full sm:w-[140px] px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 text-left sm:text-center font-bold tracking-wider uppercase outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
+                  className="w-full sm:w-[180px] px-4 py-2.5 bg-toss-bg rounded-xl text-[13px] border-0 text-left sm:text-center font-bold tracking-wider uppercase outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
               </div>
               
               {teams && teams.length > 0 && (
