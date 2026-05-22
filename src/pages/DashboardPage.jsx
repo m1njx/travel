@@ -906,11 +906,27 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                     {schedule.places && schedule.places.length > 0 ? (
                       <div className="bg-toss-bg/30 p-3 rounded-2xl space-y-1.5 border border-toss-border/20">
                         {schedule.places.slice(0, 3).map((place, idx) => (
-                          <div key={place.id} className="flex items-center gap-2 text-[12px] text-toss-text-secondary">
-                            <span className="w-4 h-4 rounded-full bg-toss-blue/10 text-toss-blue flex items-center justify-center text-[9px] font-extrabold shrink-0 border border-toss-blue/10">
-                              {idx + 1}
+                          <div key={place.id} className="flex items-center gap-2 text-[12px] text-toss-text-secondary group">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const updatedPlaces = schedule.places.map(p =>
+                                  p.id === place.id ? { ...p, completed: !p.completed } : p
+                                );
+                                schedulesSync.updateItem({ ...schedule, places: updatedPlaces });
+                              }}
+                              className="shrink-0 transition-all active:scale-90"
+                            >
+                              {place.completed ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              ) : (
+                                <Circle className="w-4 h-4 text-toss-border/40 group-hover:text-toss-blue/50" />
+                              )}
+                            </button>
+                            <span className={`font-semibold truncate flex-1 transition-all ${place.completed ? 'line-through text-toss-text-tertiary/50' : ''}`}>
+                              {place.name}
                             </span>
-                            <span className="font-semibold truncate flex-1">{place.name}</span>
                             {place.time && (
                               <span className="text-[10px] text-toss-blue font-bold bg-white border border-toss-blue/20 px-1.5 py-0.5 rounded-lg">
                                 ⏰ {place.time}
