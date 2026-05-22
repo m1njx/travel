@@ -804,9 +804,6 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight mt-1.5">
               안녕하세요, {nickname}님 👋
             </h2>
-            <p className="text-[12.5px] font-semibold text-white/80">
-              TripSync 모바일 가이드와 함께 편리하게 이동하세요!
-            </p>
           </div>
 
           {/* Quick Metrics 4-Column Grid */}
