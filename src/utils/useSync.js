@@ -12,6 +12,58 @@ import {
 } from './firebase';
 
 /**
+ * Hook to detect online/offline status and manage sync queue
+ * Stores pending operations when offline and syncs when back online
+ */
+export function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+  const [syncQueue, setSyncQueue] = useState(() => 
+    loadFromStorage('tripsync_sync_queue') || []
+  );
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Save sync queue to localStorage
+  useEffect(() => {
+    saveToStorage('tripsync_sync_queue', syncQueue);
+  }, [syncQueue]);
+
+  const addToQueue = useCallback((operation) => {
+    setSyncQueue(prev => [...prev, {
+      ...operation,
+      id: `${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      timestamp: Date.now(),
+      retries: 0,
+      maxRetries: 3
+    }]);
+  }, []);
+
+  const removeFromQueue = useCallback((operationId) => {
+    setSyncQueue(prev => prev.filter(op => op.id !== operationId));
+  }, []);
+
+  const clearQueue = useCallback(() => {
+    setSyncQueue([]);
+  }, []);
+
+  return { isOnline, syncQueue, isSyncing, setIsSyncing, addToQueue, removeFromQueue, clearQueue };
+}
+
+/**
  * Hook that syncs a list of items with Firestore (if configured) + localStorage fallback.
  * When roomCode is provided and Firebase is configured, data is synced in real-time.
  * Otherwise, uses localStorage only.

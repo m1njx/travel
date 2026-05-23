@@ -1,10 +1,56 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Wallet, TrendingUp, RefreshCw, Clock, ArrowRightLeft, Camera, Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Plus, X, Wallet, TrendingUp, RefreshCw, Clock, ArrowRightLeft, Camera, Sparkles, Loader2, Image as ImageIcon, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { fetchExchangeRates, convertToKRW, formatKRW, getCurrencySymbol, formatRateTime, CURRENCIES } from '../utils/exchangeRate';
 import { scanReceiptWithGemini, getLiveRatesWithGemini } from '../utils/gemini';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// Calculate settlement between members
+const calculateSettlement = (expenses, members) => {
+  const balances = {};
+  members.forEach(m => balances[m] = 0);
+
+  expenses.forEach(exp => {
+    if (balances.hasOwnProperty(exp.paidBy)) {
+      balances[exp.paidBy] += exp.amount;
+    }
+    const splitAmount = exp.amount / (exp.splitWith?.length || 1);
+    (exp.splitWith || []).forEach(person => {
+      if (balances.hasOwnProperty(person)) {
+        balances[person] -= splitAmount;
+      }
+    });
+  });
+
+  const settlement = [];
+  const creditors = Object.entries(balances).filter(([, v]) => v > 0.01).sort((a, b) => b[1] - a[1]);
+  const debtors = Object.entries(balances).filter(([, v]) => v < -0.01).sort((a, b) => a[1] - b[1]);
+
+  let debtorIdx = 0;
+  creditors.forEach(([creditor, amount]) => {
+    let remaining = amount;
+    while (remaining > 0.01 && debtorIdx < debtors.length) {
+      const [debtor, debt] = debtors[debtorIdx];
+      const absDebt = Math.abs(debt);
+      const transfer = Math.min(remaining, absDebt);
+      
+      settlement.push({
+        from: debtor,
+        to: creditor,
+        amount: Math.round(transfer * 100) / 100,
+      });
+      remaining -= transfer;
+      debtors[debtorIdx][1] += transfer;
+      
+      if (Math.abs(debtors[debtorIdx][1]) < 0.01) {
+        debtorIdx++;
+      }
+    }
+  });
+
+  return settlement;
+};
 
 export default function ExpensePage({ members, sync, apiKey, nickname, logAction }) {
   const { items: expenses, addItem, removeItem } = sync;
@@ -13,6 +59,10 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [selectedDateKey, setSelectedDateKey] = useState('all');
+  const [activeTab, setActiveTab] = useState('history'); // 'history' or 'settlement'
+  const [completedSettlements, setCompletedSettlements] = useState(() => 
+    JSON.parse(localStorage.getItem('tripsync_completed_settlements') || '[]')
+  );
 
   const loadRates = async (force = false) => {
     setLoading(true);
@@ -139,8 +189,53 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
       }));
   }, [filteredExpenses, rates]);
 
+  const settlement = useMemo(() => {
+    return calculateSettlement(expenses, members);
+  }, [expenses, members]);
+
+  const handleSettlementComplete = (from, to, amount) => {
+    const settlementKey = `${from}→${to}:${amount}`;
+    if (!completedSettlements.includes(settlementKey)) {
+      const updated = [...completedSettlements, settlementKey];
+      setCompletedSettlements(updated);
+      localStorage.setItem('tripsync_completed_settlements', JSON.stringify(updated));
+    }
+  };
+
+  const remainingSettlement = settlement.filter(s => 
+    !completedSettlements.includes(`${s.from}→${s.to}:${s.amount}`)
+  );
+
   return (
     <div className="pb-6">
+      {/* Tab Navigation (shown both desktop and mobile) */}
+      <div className="flex gap-2 border-b border-toss-border px-4 sm:px-5 py-3 bg-white sticky top-0 z-20">
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`px-4 py-2 rounded-lg font-bold text-[14px] transition-all ${
+            activeTab === 'history'
+              ? 'bg-toss-blue text-white'
+              : 'bg-toss-bg text-toss-text-secondary hover:bg-toss-border/40'
+          }`}
+        >
+          💰 지출 내역
+        </button>
+        <button
+          onClick={() => setActiveTab('settlement')}
+          className={`px-4 py-2 rounded-lg font-bold text-[14px] transition-all relative ${
+            activeTab === 'settlement'
+              ? 'bg-toss-blue text-white'
+              : 'bg-toss-bg text-toss-text-secondary hover:bg-toss-border/40'
+          }`}
+        >
+          🔄 정산
+          {remainingSettlement.length > 0 && (
+            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+              {remainingSettlement.length}
+            </span>
+          )}
+        </button>
+      </div>
       {/* ==================== DESKTOP UI ==================== */}
       <div className="hidden md:block">
         {/* Header with Add Button on Desktop */}
@@ -155,6 +250,9 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
           </motion.button>
         </motion.div>
 
+        {/* HISTORY TAB CONTENT */}
+        {activeTab === 'history' && (
+          <>
         {/* Grid container for stats cards (Responsive layout) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mx-4 sm:mx-5 mb-6">
           {/* Total Card */}
@@ -287,6 +385,49 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
             )}
           </div>
         </div>
+          </>
+        )}
+
+        {/* SETTLEMENT TAB CONTENT */}
+        {activeTab === 'settlement' && (
+          <div className="px-4 sm:px-5 py-6">
+            <h2 className="text-[20px] font-bold text-toss-text-primary mb-4">정산 현황</h2>
+            {remainingSettlement.length > 0 ? (
+              <div className="space-y-3">
+                {remainingSettlement.map((s, idx) => (
+                  <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                    className="bg-white border border-toss-border/55 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-[20px]">💸</div>
+                        <div className="flex-1">
+                          <p className="text-[14px] font-bold text-toss-text-primary">{s.from}</p>
+                          <p className="text-[12px] text-toss-text-secondary">에서 {s.to}에게</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[16px] font-extrabold text-toss-text-primary">₩{formatKRW(s.amount)}</p>
+                        <p className="text-[10px] text-toss-text-tertiary">전달 필요</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSettlementComplete(s.from, s.to, s.amount)}
+                      className="w-full mt-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> 정산 완료
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-16 bg-white rounded-2xl border border-toss-border/60">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-[32px]">✅</div>
+                <p className="text-[16px] font-semibold text-toss-text-primary">모든 정산이 완료되었어요!</p>
+                <p className="text-[14px] text-toss-text-secondary mt-1">깔끔하게 정산되었습니다 🎉</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ==================== MOBILE UI ==================== */}
@@ -322,6 +463,9 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
           </div>
         </div>
 
+        {/* MOBILE HISTORY TAB */}
+        {activeTab === 'history' && (
+          <>
         {/* Sleek Exchange Rates Grid (iOS layout, overlapping white card style) */}
         {rates && (
           <div className="mx-5 -mt-5 relative z-10 bg-white border border-toss-border/55 rounded-3xl p-5 shadow-lg shadow-toss-blue/5">
@@ -420,13 +564,55 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
             )}
           </div>
         </div>
+          </>
+        )}
+
+        {/* MOBILE SETTLEMENT TAB */}
+        {activeTab === 'settlement' && (
+          <div className="mx-5 mt-6">
+            <h2 className="text-[17px] font-bold text-toss-text-primary mb-4">정산 현황</h2>
+            {remainingSettlement.length > 0 ? (
+              <div className="space-y-3">
+                {remainingSettlement.map((s, idx) => (
+                  <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                    className="bg-white border border-toss-border/55 rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-[24px]">💸</div>
+                      <div className="flex-1">
+                        <p className="text-[13px] font-bold text-toss-text-primary">{s.from}</p>
+                        <p className="text-[11px] text-toss-text-secondary">→ {s.to}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[15px] font-extrabold text-toss-text-primary">₩{formatKRW(s.amount)}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSettlementComplete(s.from, s.to, s.amount)}
+                      className="w-full py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-[12px] flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> 정산 완료
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-12 bg-white rounded-2xl border border-toss-border/50 text-center">
+                <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mb-3 text-[28px]">✅</div>
+                <p className="text-[14px] font-bold text-toss-text-primary">모든 정산 완료!</p>
+                <p className="text-[11px] text-toss-text-secondary mt-1">깔끔하게 정산되었습니다</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Floating Add Button for Mobile only */}
+      {activeTab === 'history' && (
       <motion.button whileTap={{ scale: 0.92 }} onClick={() => setShowAdd(true)}
         className="md:hidden fixed bottom-24 right-4 sm:right-5 w-14 h-14 bg-toss-blue rounded-full flex items-center justify-center shadow-lg shadow-toss-blue/30 z-40">
         <Plus className="w-6 h-6 text-white" />
       </motion.button>
+      )}
 
       <AnimatePresence>
         {showAdd && (
