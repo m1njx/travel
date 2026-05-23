@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard, Shield, Loader, WiFiOff, Check } from 'lucide-react';
+import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard, Shield, Loader, WifiOff, Check } from 'lucide-react';
 import DashboardPage from './pages/DashboardPage';
 import PlannerPage from './pages/PlannerPage';
 import ExpensePage from './pages/ExpensePage';
@@ -305,7 +305,7 @@ export default function App() {
       {!isBrowserOnline && (
         <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           className="fixed top-0 left-0 right-0 bg-red-500 text-white py-2.5 px-4 text-center text-[12px] sm:text-[13px] font-semibold z-[9999] flex items-center justify-center gap-1.5 shadow-md">
-          <WiFiOff className="w-4 h-4" />
+          <WifiOff className="w-4 h-4" />
           오프라인 모드입니다. 데이터는 안전하게 로컬에 보관되며 온라인 시 자동 동기화됩니다.
         </motion.div>
       )}

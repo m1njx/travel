@@ -213,53 +213,6 @@ export function useSyncedList(roomCode, collectionName, storageKey, onlineStatus
   }, [isOnlineFirebase]);
 
   return { items, setItems: setItemsDirect, addItem, updateItem, removeItem, isOnline: isOnlineFirebase };
-      setItems(data);
-      saveToStorage(storageKey, data); // also cache locally
-      initializedRef.current = true;
-    });
-
-    return () => unsub();
-  }, [roomCode, collectionName, isOnline, storageKey]);
-
-  // Save to localStorage when offline
-  useEffect(() => {
-    if (!isOnline) {
-      saveToStorage(storageKey, items);
-    }
-  }, [items, isOnline, storageKey]);
-
-  const addItem = useCallback(async (item) => {
-    if (isOnline) {
-      await saveDocument(roomCode, collectionName, item);
-    } else {
-      setItems(prev => [...prev, item]);
-    }
-  }, [isOnline, roomCode, collectionName]);
-
-  const updateItem = useCallback(async (item) => {
-    if (isOnline) {
-      await saveDocument(roomCode, collectionName, item);
-    } else {
-      setItems(prev => prev.map(i => i.id === item.id ? item : i));
-    }
-  }, [isOnline, roomCode, collectionName]);
-
-  const removeItem = useCallback(async (id) => {
-    if (isOnline) {
-      await deleteDocument(roomCode, collectionName, id);
-    } else {
-      setItems(prev => prev.filter(i => i.id !== id));
-    }
-  }, [isOnline, roomCode, collectionName]);
-
-  // For offline: allow direct setItems
-  const setItemsDirect = useCallback((updater) => {
-    if (!isOnline) {
-      setItems(updater);
-    }
-  }, [isOnline]);
-
-  return { items, setItems: setItemsDirect, addItem, updateItem, removeItem, isOnline };
 }
 
 /**
