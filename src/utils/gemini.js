@@ -299,11 +299,11 @@ export async function getLiveRatesWithGemini(apiKey) {
   const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
   const prompt = `
 Today's date is ${todayStr}. Search the web for the absolute latest, live, real-time exchange rates of the following currencies to Korean Won (KRW) right now (as of today, ${todayStr}):
-Currencies to search: EUR, GBP, CHF, CZK, USD, SEK, NOK, DKK, PLN, HUF.
+Currencies to search: EUR, GBP, CHF, CZK, USD, HUF.
 Please find the current value of 1 unit of each currency in South Korean Won (KRW). For example, 1 EUR to KRW, 1 USD to KRW, etc.
 
 You must respond with a single valid JSON object containing:
-1. "rates": An object where keys are the currency codes (EUR, GBP, CHF, CZK, USD, SEK, NOK, DKK, PLN, HUF) and values are numbers representing the KRW value (e.g. EUR: 1515.5, USD: 1380.2).
+1. "rates": An object where keys are the currency codes (EUR, GBP, CHF, CZK, USD, HUF) and values are numbers representing the KRW value (e.g. EUR: 1515.5, USD: 1380.2).
 2. "lastUpdated": The exact time or date of the rates you found, as a ISO string or human readable string in Korean Standard Time (e.g., "${new Date().toISOString().slice(0, 10)} 21:00").
 
 Example response format:
@@ -314,10 +314,6 @@ Example response format:
     "CHF": 1572.0,
     "CZK": 60.1,
     "USD": 1378.5,
-    "SEK": 128.4,
-    "NOK": 126.2,
-    "DKK": 202.8,
-    "PLN": 350.5,
     "HUF": 3.75
   },
   "lastUpdated": "${todayStr}"

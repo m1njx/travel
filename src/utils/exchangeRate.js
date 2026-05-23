@@ -12,10 +12,6 @@ const FALLBACK_RATES = {
   CHF: 1570,
   CZK: 60,
   USD: 1375,
-  SEK: 128,
-  NOK: 126,
-  DKK: 203,
-  PLN: 350,
   HUF: 3.7,
 };
 
@@ -119,7 +115,7 @@ function parseRatesFromData(rawRates) {
   if (!krwPerEur) throw new Error('KRW rate not found');
 
   const rates = {};
-  const targetCurrencies = ['EUR', 'GBP', 'CHF', 'CZK', 'USD', 'SEK', 'NOK', 'DKK', 'PLN', 'HUF'];
+  const targetCurrencies = ['EUR', 'GBP', 'CHF', 'CZK', 'USD', 'HUF'];
 
   targetCurrencies.forEach(code => {
     if (code === 'EUR') {
@@ -212,9 +208,5 @@ export const CURRENCIES = [
   { code: 'CHF', name: '스위스 프랑', flag: '🇨🇭' },
   { code: 'CZK', name: '체코 코루나', flag: '🇨🇿' },
   { code: 'USD', name: '미국 달러', flag: '🇺🇸' },
-  { code: 'SEK', name: '스웨덴 크로나', flag: '🇸🇪' },
-  { code: 'NOK', name: '노르웨이 크로네', flag: '🇳🇴' },
-  { code: 'DKK', name: '덴마크 크로네', flag: '🇩🇰' },
-  { code: 'PLN', name: '폴란드 즐로티', flag: '🇵🇱' },
   { code: 'HUF', name: '헝가리 포린트', flag: '🇭🇺' },
 ];
