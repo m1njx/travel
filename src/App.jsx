@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard, Shield } from 'lucide-react';
+import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard, Shield, Loader, WiFiOff, Check } from 'lucide-react';
 import DashboardPage from './pages/DashboardPage';
 import PlannerPage from './pages/PlannerPage';
 import ExpensePage from './pages/ExpensePage';
@@ -12,7 +12,7 @@ import RoomJoinScreen from './pages/RoomJoinScreen';
 import ActivityLogPage from './pages/ActivityLogPage';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from './utils/storage';
 import { isFirebaseConfigured, saveRoomMeta, getRoomMeta, generateRoomCode, saveActivityLog } from './utils/firebase';
-import { useSyncedList, useSyncedMeta, useActivityLog, useSyncedLogs } from './utils/useSync';
+import { useSyncedList, useSyncedMeta, useActivityLog, useSyncedLogs, useOnlineStatus } from './utils/useSync';
 
 const TABS = [
   { id: 'dashboard', label: '홈', icon: LayoutDashboard },
@@ -25,18 +25,9 @@ const TABS = [
 ];
 
 export default function App() {
-  const [isBrowserOnline, setIsBrowserOnline] = useState(() => navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsBrowserOnline(true);
-    const handleOffline = () => setIsBrowserOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  // Online status and sync queue management
+  const onlineStatus = useOnlineStatus();
+  const { isOnline: isBrowserOnline } = onlineStatus;
 
   // Room state
   const [roomCode, setRoomCode] = useState(() => loadFromStorage('tripsync_room') || '');
@@ -79,10 +70,10 @@ export default function App() {
     saveToStorage('tripsync_teams', newTeams);
   };
 
-  // Synced data via hooks (used in child pages via props)
-  const schedulesSync = useSyncedList(roomCode, 'schedules', STORAGE_KEYS.SCHEDULES);
-  const expensesSync = useSyncedList(roomCode, 'expenses', STORAGE_KEYS.EXPENSES);
-  const checklistsSync = useSyncedList(roomCode, 'checklists', STORAGE_KEYS.CHECKLISTS);
+  // Synced data via hooks (used in child pages via props) - with auto-sync
+  const schedulesSync = useSyncedList(roomCode, 'schedules', STORAGE_KEYS.SCHEDULES, onlineStatus);
+  const expensesSync = useSyncedList(roomCode, 'expenses', STORAGE_KEYS.EXPENSES, onlineStatus);
+  const checklistsSync = useSyncedList(roomCode, 'checklists', STORAGE_KEYS.CHECKLISTS, onlineStatus);
 
   // Active member and their assigned teams
   const activeMember = members.find(m => typeof m === 'object' && m.name === nickname);
@@ -310,13 +301,43 @@ export default function App() {
 
   return (
     <div className="w-full min-h-screen min-h-dvh bg-toss-bg flex flex-col md:flex-row">
+      {/* Offline Status Banner */}
       {!isBrowserOnline && (
         <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           className="fixed top-0 left-0 right-0 bg-red-500 text-white py-2.5 px-4 text-center text-[12px] sm:text-[13px] font-semibold z-[9999] flex items-center justify-center gap-1.5 shadow-md">
-          <span>🔌</span>
+          <WiFiOff className="w-4 h-4" />
           오프라인 모드입니다. 데이터는 안전하게 로컬에 보관되며 온라인 시 자동 동기화됩니다.
         </motion.div>
       )}
+
+      {/* Sync Status Banner */}
+      <AnimatePresence>
+        {onlineStatus.syncStatus === 'syncing' && (
+          <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 bg-blue-500 text-white py-2.5 px-4 text-center text-[12px] sm:text-[13px] font-semibold z-[9998] flex items-center justify-center gap-1.5 shadow-md"
+            style={{ marginTop: !isBrowserOnline ? '40px' : '0px' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+              <Loader className="w-4 h-4" />
+            </motion.div>
+            데이터 동기화 중...
+          </motion.div>
+        )}
+        {onlineStatus.syncStatus === 'success' && (
+          <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 bg-emerald-500 text-white py-2.5 px-4 text-center text-[12px] sm:text-[13px] font-semibold z-[9998] flex items-center justify-center gap-1.5 shadow-md"
+            style={{ marginTop: !isBrowserOnline ? '40px' : '0px' }}>
+            <Check className="w-4 h-4" />
+            동기화 완료! {onlineStatus.syncQueue.length > 0 ? `(${onlineStatus.syncQueue.length}건 남음)` : ''}
+          </motion.div>
+        )}
+        {onlineStatus.syncStatus === 'error' && (
+          <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 bg-orange-500 text-white py-2.5 px-4 text-center text-[12px] sm:text-[13px] font-semibold z-[9998] flex items-center justify-center gap-1.5 shadow-md"
+            style={{ marginTop: !isBrowserOnline ? '40px' : '0px' }}>
+            동기화 실패. 나중에 다시 시도합니다.
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Desktop Sidebar Navigation */}
       <aside className="hidden md:flex w-64 bg-white border-r border-toss-border flex-col p-6 sticky top-0 h-screen shrink-0 justify-between">
         <div className="space-y-6">
