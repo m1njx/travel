@@ -20,6 +20,13 @@ const getDatesInRange = (startDate, endDate) => {
   return dates;
 };
 
+const formatDateLabel = (dateStr) => {
+  if (!dateStr || dateStr === '날짜 미정') return '날짜 미정';
+  const dt = new Date(dateStr);
+  const wk = ['일', '월', '화', '수', '목', '금', '토'];
+  return `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${wk[dt.getDay()]})`;
+};
+
 export default function PlannerPage({
   sync, nickname, apiKey, initialExpandedDate, clearInitialExpandedDate, logAction, activeMemberTeams = [], isAdmin = false
 }) {
@@ -218,13 +225,6 @@ export default function PlannerPage({
   const totalP = schedules.reduce((a, s) => a + (s.places?.length || 0), 0);
   const doneP = schedules.reduce((a, s) => a + (s.places?.filter(p => p.completed).length || 0), 0);
   const rate = totalP > 0 ? Math.round((doneP / totalP) * 100) : 0;
-
-  const formatDateLabel = (dateStr) => {
-    if (dateStr === '날짜 미정') return dateStr;
-    const dt = new Date(dateStr);
-    const wk = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${wk[dt.getDay()]})`;
-  };
 
   const getDayNumber = (dateStr) => {
     if (dateStr === '날짜 미정' || sortedDates.length === 0) return '';
