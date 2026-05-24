@@ -6,6 +6,20 @@ import { optimizeScheduleWithGemini } from '../utils/gemini';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+const getDatesInRange = (startDate, endDate) => {
+  if (!startDate) return [];
+  if (!endDate || startDate === endDate) return [startDate];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const dates = [];
+  let current = new Date(start);
+  while (current <= end) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+};
+
 export default function PlannerPage({
   sync, nickname, apiKey, initialExpandedDate, clearInitialExpandedDate, logAction, activeMemberTeams = [], isAdmin = false
 }) {
@@ -42,19 +56,22 @@ export default function PlannerPage({
     // Check team period constraint for members
     if (!isAdmin && activeMemberTeams && activeMemberTeams.length > 0) {
       if (s.date && s.date !== '날짜 미정') {
-        const scheduleDate = new Date(s.date);
-        scheduleDate.setHours(0, 0, 0, 0);
+        const scheduleStart = new Date(s.date);
+        const scheduleEnd = new Date(s.endDate || s.date);
+        scheduleStart.setHours(0, 0, 0, 0);
+        scheduleEnd.setHours(0, 0, 0, 0);
 
         const isValid = activeMemberTeams.some(team => {
           const start = new Date(team.startDate);
           const end = new Date(team.endDate);
           start.setHours(0, 0, 0, 0);
           end.setHours(0, 0, 0, 0);
-          return scheduleDate >= start && scheduleDate <= end;
+          return scheduleStart >= start && scheduleEnd <= end;
         });
 
         if (!isValid) {
-          alert(`선택한 날짜(${s.date})는 소속된 팀의 여행 기간에 포함되지 않아 일정을 등록할 수 없습니다.\n\n* 소속 팀 기간:\n${activeMemberTeams.map(t => `- ${t.name}: ${t.startDate} ~ ${t.endDate}`).join('\n')}`);
+          const dateText = s.endDate && s.endDate !== s.date ? `${s.date} ~ ${s.endDate}` : s.date;
+          alert(`선택한 기간(${dateText})은 소속된 팀의 여행 기간에 포함되지 않아 일정을 등록할 수 없습니다.\n\n* 소속 팀 기간:\n${activeMemberTeams.map(t => `- ${t.name}: ${t.startDate} ~ ${t.endDate}`).join('\n')}`);
           return;
         }
       }
@@ -85,19 +102,22 @@ export default function PlannerPage({
     // Check team period constraint for members
     if (!isAdmin && activeMemberTeams && activeMemberTeams.length > 0) {
       if (u.date && u.date !== '날짜 미정') {
-        const scheduleDate = new Date(u.date);
-        scheduleDate.setHours(0, 0, 0, 0);
+        const scheduleStart = new Date(u.date);
+        const scheduleEnd = new Date(u.endDate || u.date);
+        scheduleStart.setHours(0, 0, 0, 0);
+        scheduleEnd.setHours(0, 0, 0, 0);
 
         const isValid = activeMemberTeams.some(team => {
           const start = new Date(team.startDate);
           const end = new Date(team.endDate);
           start.setHours(0, 0, 0, 0);
           end.setHours(0, 0, 0, 0);
-          return scheduleDate >= start && scheduleDate <= end;
+          return scheduleStart >= start && scheduleEnd <= end;
         });
 
         if (!isValid) {
-          alert(`선택한 날짜(${u.date})는 소속된 팀의 여행 기간에 포함되지 않아 일정을 수정할 수 없습니다.\n\n* 소속 팀 기간:\n${activeMemberTeams.map(t => `- ${t.name}: ${t.startDate} ~ ${t.endDate}`).join('\n')}`);
+          const dateText = u.endDate && u.endDate !== u.date ? `${u.date} ~ ${u.endDate}` : u.date;
+          alert(`선택한 기간(${dateText})은 소속된 팀의 여행 기간에 포함되지 않아 일정을 수정할 수 없습니다.\n\n* 소속 팀 기간:\n${activeMemberTeams.map(t => `- ${t.name}: ${t.startDate} ~ ${t.endDate}`).join('\n')}`);
           return;
         }
       }
@@ -707,7 +727,17 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
   const [editPStartTime, setEditPStartTime] = useState('');
   const [editPEndTime, setEditPEndTime] = useState('');
   const [editPUrl, setEditPUrl] = useState('');
-  
+
+  // Date selection states for places
+  const [pDate, setPDate] = useState(schedule?.date || '');
+  const [editPDate, setEditPDate] = useState('');
+
+  useEffect(() => {
+    if (schedule?.date) {
+      setPDate(schedule.date);
+    }
+  }, [schedule]);
+
   const done = schedule.places?.filter(p => p.completed).length || 0;
   const total = schedule.places?.length || 0;
   const allDone = total > 0 ? done === total : !!schedule.completed;
@@ -733,13 +763,15 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
       name: pName.trim(),
       memo: pMemo.trim(),
       time: combinedTime,
-      url: formattedUrl
+      url: formattedUrl,
+      date: pDate || schedule.date
     });
     setPName('');
     setPMemo('');
     setPStartTime('');
     setPEndTime('');
     setPUrl('');
+    setPDate(schedule.date);
     setShowAdd(false);
   };
 
@@ -748,6 +780,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
     setEditPName(pl.name);
     setEditPMemo(pl.memo || '');
     setEditPUrl(pl.url || '');
+    setEditPDate(pl.date || schedule.date);
     
     let startTime = '';
     let endTime = '';
@@ -785,7 +818,8 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
       name: editPName.trim(),
       memo: editPMemo.trim(),
       time: combinedTime,
-      url: formattedUrl
+      url: formattedUrl,
+      date: editPDate || schedule.date
     });
     setEditingPlaceId(null);
   };
@@ -849,13 +883,401 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
     }
   };
 
-  // Sort places by time chronologically (empty times go to the bottom)
+  // Sort places by date first, then by time chronologically
   const sortedPlaces = [...(schedule.places || [])].sort((a, b) => {
+    const dateA = a.date || schedule.date;
+    const dateB = b.date || schedule.date;
+    if (dateA !== dateB) {
+      return dateA.localeCompare(dateB);
+    }
     if (!a.time && !b.time) return 0;
     if (!a.time) return 1;
     if (!b.time) return -1;
     return a.time.localeCompare(b.time);
   });
+
+  const isMultiDay = schedule.endDate && schedule.endDate !== schedule.date;
+  const rangeDates = getDatesInRange(schedule.date, schedule.endDate);
+
+  const placesByDate = sortedPlaces.reduce((acc, p) => {
+    const d = p.date || schedule.date;
+    if (!acc[d]) acc[d] = [];
+    acc[d].push(p);
+    return acc;
+  }, {});
+
+  const allDates = Array.from(new Set([...rangeDates, ...Object.keys(placesByDate)]))
+    .sort((a, b) => a.localeCompare(b));
+
+  const renderMobilePlaceRow = (pl) => {
+    if (pl.id === editingPlaceId) {
+      return (
+        <motion.div
+          key={pl.id}
+          layout
+          className="p-3 bg-toss-bg rounded-xl space-y-2 border border-toss-blue/20"
+        >
+          {isMultiDay && rangeDates.length > 1 && (
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-toss-text-secondary">방문 일자</label>
+              <select 
+                value={editPDate} 
+                onChange={e => setEditPDate(e.target.value)}
+                className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue font-semibold"
+              >
+                {rangeDates.map((d, i) => (
+                  <option key={d} value={d}>
+                    {i + 1}일차 - {formatDateLabel(d)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                checked={useEditEndTime} 
+                onChange={e => {
+                  setUseEditEndTime(e.target.checked);
+                  if (!e.target.checked) setEditPEndTime('');
+                  else {
+                    let defaultEnd = '10:00';
+                    if (editPStartTime) {
+                      const [h, m] = editPStartTime.split(':').map(Number);
+                      defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                    }
+                    setEditPEndTime(defaultEnd);
+                  }
+                }} 
+                className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue"
+              />
+              <span className="text-[10px] font-bold text-toss-text-secondary">종료 시간 포함</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-12 gap-2">
+            <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
+              {!editPStartTime ? (
+                <button 
+                  type="button" 
+                  onClick={() => setEditPStartTime('09:00')}
+                  className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
+                >
+                  ⏰ 시작 시간
+                </button>
+              ) : (
+                <TimeInputGroup
+                  label="시작"
+                  value={editPStartTime}
+                  onChange={setEditPStartTime}
+                  onClear={() => setEditPStartTime('')}
+                  dropdownId="editStartAmPmMobile"
+                  activeDropdown={activeDropdown}
+                  onToggleDropdown={setActiveDropdown}
+                />
+              )}
+            </div>
+
+            {useEditEndTime && (
+              <div className="col-span-6">
+                {!editPEndTime ? (
+                  <button 
+                    type="button" 
+                    onClick={() => setEditPEndTime('10:00')}
+                    className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
+                  >
+                    ⏰ 종료 시간
+                  </button>
+                ) : (
+                  <TimeInputGroup
+                    label="종료"
+                    value={editPEndTime}
+                    onChange={setEditPEndTime}
+                    onClear={() => {
+                      setEditPEndTime('');
+                      setUseEditEndTime(false);
+                    }}
+                    dropdownId="editEndAmPmMobile"
+                    activeDropdown={activeDropdown}
+                    onToggleDropdown={setActiveDropdown}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <input type="text" placeholder="방문지 이름" value={editPName} onChange={e => setEditPName(e.target.value)}
+            className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" autoFocus />
+          <input type="text" placeholder="메모" value={editPMemo} onChange={e => setEditPMemo(e.target.value)}
+            className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
+          <input type="text" placeholder="참고 URL" value={editPUrl} onChange={e => setEditPUrl(e.target.value)}
+            className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
+          <div className="flex gap-2 pt-1">
+            <button onClick={cancelEditPlace} className="flex-1 py-1.8 rounded-xl text-[11px] font-bold text-toss-text-secondary bg-white border border-toss-border">취소</button>
+            <button onClick={() => handleSaveEditPlace(pl.id)} disabled={!editPName.trim()} className="flex-1 py-1.8 rounded-xl text-[11px] font-extrabold text-white bg-toss-blue disabled:opacity-40">저장</button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        key={pl.id}
+        layout
+        className={`flex flex-col gap-2 p-3 rounded-2xl border border-toss-border/30 bg-white ${pl.completed ? 'bg-green-50/10 border-l-4 border-l-toss-success' : 'shadow-sm'}`}
+      >
+        <div className="flex items-start gap-2.5">
+          <button onClick={() => onTogglePlace(pl.id)} className="mt-0.5 flex-shrink-0 text-toss-blue">
+            {pl.completed ? (
+              <CheckCircle2 className="w-5 h-5 text-toss-success" />
+            ) : (
+              <Circle className="w-5 h-5 text-toss-text-tertiary" />
+            )}
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col gap-1">
+              {pl.time && (
+                <div className="self-start">
+                  <span className="inline-flex items-center gap-0.5 text-[9.5px] font-extrabold bg-toss-blue/5 text-toss-blue px-2 py-0.5 rounded-md">
+                    ⏰ {pl.time}
+                  </span>
+                </div>
+              )}
+              <p className={`text-[13px] font-bold tracking-tight leading-snug break-all ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
+                {pl.name}
+              </p>
+            </div>
+            {pl.memo && (
+              <p className={`text-[11px] mt-1 leading-snug break-all ${pl.completed ? 'text-toss-text-tertiary' : 'text-toss-text-secondary font-medium'}`}>
+                {pl.memo}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-toss-border/30">
+          <button
+            onClick={(e) => handleGoogleMapsSearch(e, pl.name)}
+            className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-blue"
+          >
+            <Compass className="w-3 h-3" />
+            <span>길찾기</span>
+          </button>
+          {pl.url && (
+            <button
+              onClick={(e) => handleLinkClick(e, pl.url)}
+              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-blue"
+            >
+              <Link2 className="w-3 h-3" />
+              <span>링크</span>
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); startEditPlace(pl); }}
+            className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-text-secondary"
+          >
+            <Edit3 className="w-3 h-3" />
+            <span>수정</span>
+          </button>
+          <button
+            onClick={() => onDeletePlace(pl.id)}
+            className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-red-50 text-[10.5px] font-bold text-toss-danger"
+          >
+            <X className="w-3 h-3" />
+            <span>삭제</span>
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderDesktopPlaceRow = (pl) => {
+    if (pl.id === editingPlaceId) {
+      return (
+        <motion.div
+          key={pl.id}
+          layout
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="p-3 bg-toss-bg rounded-xl space-y-2 border border-toss-blue/20"
+        >
+          {isMultiDay && rangeDates.length > 1 && (
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-toss-text-secondary">방문 일자</label>
+              <select 
+                value={editPDate} 
+                onChange={e => setEditPDate(e.target.value)}
+                className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border outline-none focus:border-toss-blue font-semibold"
+              >
+                {rangeDates.map((d, i) => (
+                  <option key={d} value={d}>
+                    {i + 1}일차 - {formatDateLabel(d)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                checked={useEditEndTime} 
+                onChange={e => {
+                  setUseEditEndTime(e.target.checked);
+                  if (!e.target.checked) {
+                    setEditPEndTime('');
+                  } else {
+                    let defaultEnd = '10:00';
+                    if (editPStartTime) {
+                      const [h, m] = editPStartTime.split(':').map(Number);
+                      defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                    }
+                    setEditPEndTime(defaultEnd);
+                  }
+                }} 
+                className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue focus:ring-toss-blue"
+              />
+              <span className="text-[10.5px] font-semibold text-toss-text-secondary">종료 시간 포함</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-12 gap-2">
+            <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
+              {!editPStartTime ? (
+                <button 
+                  type="button" 
+                  onClick={() => setEditPStartTime('09:00')}
+                  className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
+                >
+                  ⏰ 시작 시간 지정
+                </button>
+              ) : (
+                <TimeInputGroup
+                  label="시작"
+                  value={editPStartTime}
+                  onChange={setEditPStartTime}
+                  onClear={() => setEditPStartTime('')}
+                  dropdownId="editStartAmPm"
+                  activeDropdown={activeDropdown}
+                  onToggleDropdown={setActiveDropdown}
+                />
+              )}
+            </div>
+
+            {useEditEndTime && (
+              <div className="col-span-6">
+                {!editPEndTime ? (
+                  <button 
+                    type="button" 
+                    onClick={() => setEditPEndTime('10:00')}
+                    className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
+                  >
+                    ⏰ 종료 시간 지정
+                  </button>
+                ) : (
+                  <TimeInputGroup
+                    label="종료"
+                    value={editPEndTime}
+                    onChange={setEditPEndTime}
+                    onClear={() => {
+                      setEditPEndTime('');
+                      setUseEditEndTime(false);
+                    }}
+                    dropdownId="editEndAmPm"
+                    activeDropdown={activeDropdown}
+                    onToggleDropdown={setActiveDropdown}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <input type="text" placeholder="방문지 이름" value={editPName} onChange={e => setEditPName(e.target.value)}
+            className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" autoFocus />
+          <input type="text" placeholder="메모" value={editPMemo} onChange={e => setEditPMemo(e.target.value)}
+            className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" />
+          <input type="text" placeholder="참고 URL" value={editPUrl} onChange={e => setEditPUrl(e.target.value)}
+            className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" />
+          <div className="flex gap-2 pt-1">
+            <button onClick={cancelEditPlace} className="flex-1 py-2 rounded-xl text-[12px] font-medium text-toss-text-secondary bg-white border border-toss-border">취소</button>
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => handleSaveEditPlace(pl.id)} disabled={!editPName.trim()} className="flex-1 py-2 rounded-xl text-[12px] font-semibold text-white bg-toss-blue disabled:opacity-40">저장</motion.button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        key={pl.id}
+        layout
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 10 }}
+        className={`flex items-start gap-3 p-2.5 rounded-xl ${pl.completed ? 'bg-green-50/50' : 'bg-toss-bg'}`}
+      >
+        <motion.button whileTap={{ scale: 0.8 }} onClick={() => onTogglePlace(pl.id)} className="mt-0.5 flex-shrink-0 btn-icon-sm">
+          {pl.completed ? (
+            <CheckCircle2 className="w-5 h-5 text-toss-success" />
+          ) : (
+            <Circle className="w-5 h-5 text-toss-text-tertiary" />
+          )}
+        </motion.button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {pl.time && (
+              <span className="text-[10px] sm:text-[11px] font-bold bg-toss-blue/10 text-toss-blue px-2 py-0.5 rounded-md flex items-center gap-0.5">
+                ⏰ {pl.time}
+              </span>
+            )}
+            <p className={`text-[13px] sm:text-[14px] font-medium ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
+              {pl.name}
+            </p>
+          </div>
+          {pl.memo && (
+            <p className={`text-[11px] sm:text-[12px] mt-0.5 ${pl.completed ? 'text-toss-text-tertiary' : 'text-toss-text-secondary'}`}>
+              {pl.memo}
+            </p>
+          )}
+        </div>
+        
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => handleGoogleMapsSearch(e, pl.name)}
+          className="p-1.5 rounded-full hover:bg-toss-blue-light flex-shrink-0 btn-icon-sm text-toss-blue"
+          title="구글맵 길찾기"
+        >
+          <Compass className="w-4 h-4" />
+        </motion.button>
+        
+        {pl.url && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => handleLinkClick(e, pl.url)}
+            className="p-1.5 rounded-full hover:bg-toss-blue-light flex-shrink-0 btn-icon-sm text-toss-blue"
+            title="관련 링크 바로가기"
+          >
+            <Link2 className="w-4 h-4" />
+          </motion.button>
+        )}
+        
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => { e.stopPropagation(); startEditPlace(pl); }}
+          className="p-1.5 rounded-full hover:bg-toss-bg flex-shrink-0 btn-icon-sm text-toss-text-secondary"
+          title="수정"
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => onDeletePlace(pl.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
+          <X className="w-3.5 h-3.5 text-toss-text-tertiary" />
+        </motion.button>
+      </motion.div>
+    );
+  };
 
   if (isMobile) {
     return (
@@ -885,6 +1307,15 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
               {allDone && (
                 <span className="text-[10px] font-extrabold text-toss-success bg-green-50 px-2 py-0.5 rounded-full">
                   전부 완료 ✓
+                </span>
+              )}
+              {schedule.endDate && schedule.endDate !== schedule.date ? (
+                <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+                  📅 {schedule.date} ~ {schedule.endDate}
+                </span>
+              ) : (
+                <span className="text-[10px] font-extrabold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
+                  📅 {schedule.date}
                 </span>
               )}
             </div>
@@ -982,175 +1413,37 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                 )}
 
                 {viewMode === 'list' ? (
-                  <div className="space-y-3 pr-0.5 max-h-[350px] overflow-y-auto">
-                    {sortedPlaces.map((pl) => {
-                      if (pl.id === editingPlaceId) {
+                  <div className="space-y-4 pr-0.5 max-h-[350px] overflow-y-auto">
+                    {isMultiDay ? (
+                      allDates.map((d) => {
+                        const dayPlaces = placesByDate[d] || [];
+                        const dayNum = rangeDates.indexOf(d) !== -1 ? rangeDates.indexOf(d) + 1 : null;
+                        const dayLabel = dayNum ? `${dayNum}일차 - ` : '';
+                        const dateLabel = formatDateLabel(d);
+
                         return (
-                          <motion.div
-                            key={pl.id}
-                            layout
-                            className="p-3 bg-toss-bg rounded-xl space-y-2 border border-toss-blue/20"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
-                              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                                <input 
-                                  type="checkbox" 
-                                  checked={useEditEndTime} 
-                                  onChange={e => {
-                                    setUseEditEndTime(e.target.checked);
-                                    if (!e.target.checked) setEditPEndTime('');
-                                    else {
-                                      let defaultEnd = '10:00';
-                                      if (editPStartTime) {
-                                        const [h, m] = editPStartTime.split(':').map(Number);
-                                        defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                                      }
-                                      setEditPEndTime(defaultEnd);
-                                    }
-                                  }} 
-                                  className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue"
-                                />
-                                <span className="text-[10px] font-bold text-toss-text-secondary">종료 시간 포함</span>
-                              </label>
+                          <div key={d} className="space-y-2">
+                            <div className="pt-2 pb-1 bg-white z-10 flex items-center">
+                              <span className="text-[10px] font-extrabold text-toss-blue bg-toss-blue-light/70 px-2 py-0.5 rounded-lg shadow-sm">
+                                {dayLabel}{dateLabel}
+                              </span>
                             </div>
-
-                            <div className="grid grid-cols-12 gap-2">
-                              <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
-                                {!editPStartTime ? (
-                                  <button 
-                                    type="button" 
-                                    onClick={() => setEditPStartTime('09:00')}
-                                    className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
-                                  >
-                                    ⏰ 시작 시간
-                                  </button>
-                                ) : (
-                                  <TimeInputGroup
-                                    label="시작"
-                                    value={editPStartTime}
-                                    onChange={setEditPStartTime}
-                                    onClear={() => setEditPStartTime('')}
-                                    dropdownId="editStartAmPm"
-                                    activeDropdown={activeDropdown}
-                                    onToggleDropdown={setActiveDropdown}
-                                  />
-                                )}
+                            {dayPlaces.length > 0 ? (
+                              <div className="space-y-2.5 pl-1.5 border-l-2 border-toss-border/60 ml-2 pt-1">
+                                {dayPlaces.map((pl) => renderMobilePlaceRow(pl))}
                               </div>
-
-                              {useEditEndTime && (
-                                <div className="col-span-6">
-                                  {!editPEndTime ? (
-                                    <button 
-                                      type="button" 
-                                      onClick={() => setEditPEndTime('10:00')}
-                                      className="w-full h-[36px] bg-white rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center justify-center gap-1 border border-toss-border/50"
-                                    >
-                                      ⏰ 종료 시간
-                                    </button>
-                                  ) : (
-                                    <TimeInputGroup
-                                      label="종료"
-                                      value={editPEndTime}
-                                      onChange={setEditPEndTime}
-                                      onClear={() => {
-                                        setEditPEndTime('');
-                                        setUseEditEndTime(false);
-                                      }}
-                                      dropdownId="editEndAmPm"
-                                      activeDropdown={activeDropdown}
-                                      onToggleDropdown={setActiveDropdown}
-                                    />
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <input type="text" placeholder="방문지 이름" value={editPName} onChange={e => setEditPName(e.target.value)}
-                              className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" autoFocus />
-                            <input type="text" placeholder="메모" value={editPMemo} onChange={e => setEditPMemo(e.target.value)}
-                              className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
-                            <input type="text" placeholder="참고 URL" value={editPUrl} onChange={e => setEditPUrl(e.target.value)}
-                              className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue" />
-                            <div className="flex gap-2 pt-1">
-                              <button onClick={cancelEditPlace} className="flex-1 py-1.8 rounded-xl text-[11px] font-bold text-toss-text-secondary bg-white border border-toss-border">취소</button>
-                              <button onClick={() => handleSaveEditPlace(pl.id)} disabled={!editPName.trim()} className="flex-1 py-1.8 rounded-xl text-[11px] font-extrabold text-white bg-toss-blue disabled:opacity-40">저장</button>
-                            </div>
-                          </motion.div>
-                        );
-                      }
-
-                      return (
-                        <motion.div
-                          key={pl.id}
-                          layout
-                          className={`flex flex-col gap-2 p-3 rounded-2xl border border-toss-border/30 bg-white ${pl.completed ? 'bg-green-50/10 border-l-4 border-l-toss-success' : 'shadow-sm'}`}
-                        >
-                          {/* Top row: Checkbox + Name & Memo + optional Time badge */}
-                          <div className="flex items-start gap-2.5">
-                            <button onClick={() => onTogglePlace(pl.id)} className="mt-0.5 flex-shrink-0 text-toss-blue">
-                              {pl.completed ? (
-                                <CheckCircle2 className="w-5 h-5 text-toss-success" />
-                              ) : (
-                                <Circle className="w-5 h-5 text-toss-text-tertiary" />
-                              )}
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-col gap-1">
-                                {pl.time && (
-                                  <div className="self-start">
-                                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-extrabold bg-toss-blue/5 text-toss-blue px-2 py-0.5 rounded-md">
-                                      ⏰ {pl.time}
-                                    </span>
-                                  </div>
-                                )}
-                                <p className={`text-[13px] font-bold tracking-tight leading-snug break-all ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
-                                  {pl.name}
-                                </p>
-                              </div>
-                              {pl.memo && (
-                                <p className={`text-[11px] mt-1 leading-snug break-all ${pl.completed ? 'text-toss-text-tertiary' : 'text-toss-text-secondary font-medium'}`}>
-                                  {pl.memo}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Action row placed UNDERNEATH - solves mobile squished text width issues! */}
-                          <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-toss-border/30">
-                            <button
-                              onClick={(e) => handleGoogleMapsSearch(e, pl.name)}
-                              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-blue"
-                            >
-                              <Compass className="w-3 h-3" />
-                              <span>길찾기</span>
-                            </button>
-                            {pl.url && (
-                              <button
-                                onClick={(e) => handleLinkClick(e, pl.url)}
-                                className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-blue"
-                              >
-                                <Link2 className="w-3 h-3" />
-                                <span>링크</span>
-                              </button>
+                            ) : (
+                              <p className="text-[11px] text-toss-text-tertiary italic pl-4 py-1">방문 장소가 없습니다.</p>
                             )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); startEditPlace(pl); }}
-                              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-toss-bg text-[10.5px] font-bold text-toss-text-secondary"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                              <span>수정</span>
-                            </button>
-                            <button
-                              onClick={() => onDeletePlace(pl.id)}
-                              className="inline-flex items-center gap-0.5 px-2 py-1 rounded-lg bg-red-50 text-[10.5px] font-bold text-toss-danger"
-                            >
-                              <X className="w-3 h-3" />
-                              <span>삭제</span>
-                            </button>
                           </div>
-                        </motion.div>
-                      );
-                    })}
+                        );
+                      })
+                    ) : (
+                      sortedPlaces.map((pl) => renderMobilePlaceRow(pl))
+                    )}
+                    {sortedPlaces.length === 0 && !isMultiDay && (
+                      <p className="text-[12px] text-toss-text-tertiary italic text-center py-4">방문지가 없습니다. 아래 버튼으로 추가해보세요!</p>
+                    )}
                   </div>
                 ) : (
                   <TravelMap places={sortedPlaces} dateLabel={schedule.title} />
@@ -1158,6 +1451,23 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
 
                 {showAdd ? (
                   <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 p-3 bg-toss-bg rounded-xl space-y-2">
+                    {isMultiDay && rangeDates.length > 1 && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-bold text-toss-text-secondary">방문 일자</label>
+                        <select 
+                          value={pDate} 
+                          onChange={e => setPDate(e.target.value)}
+                          className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue font-semibold"
+                        >
+                          {rangeDates.map((d, i) => (
+                            <option key={d} value={d}>
+                              {i + 1}일차 - {formatDateLabel(d)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
                       <label className="flex items-center gap-1.5 cursor-pointer select-none">
@@ -1341,6 +1651,15 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                 전부 완료 ✓
               </span>
             )}
+            {schedule.endDate && schedule.endDate !== schedule.date ? (
+              <span className="text-[10px] sm:text-[11px] font-medium bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+                📅 {schedule.date} ~ {schedule.endDate}
+              </span>
+            ) : (
+              <span className="text-[10px] sm:text-[11px] font-medium text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
+                📅 {schedule.date}
+              </span>
+            )}
           </div>
           <h4 className={`text-[15px] sm:text-[16px] font-bold ${allDone ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>{schedule.title}</h4>
 
@@ -1442,175 +1761,37 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
               )}
 
               {viewMode === 'list' ? (
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                  {sortedPlaces.map((pl) => {
-                    if (pl.id === editingPlaceId) {
+                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                  {isMultiDay ? (
+                    allDates.map((d) => {
+                      const dayPlaces = placesByDate[d] || [];
+                      const dayNum = rangeDates.indexOf(d) !== -1 ? rangeDates.indexOf(d) + 1 : null;
+                      const dayLabel = dayNum ? `${dayNum}일차 - ` : '';
+                      const dateLabel = formatDateLabel(d);
+
                       return (
-                        <motion.div
-                          key={pl.id}
-                          layout
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="p-3 bg-toss-bg rounded-xl space-y-2 border border-toss-blue/20"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
-                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                              <input 
-                                type="checkbox" 
-                                checked={useEditEndTime} 
-                                onChange={e => {
-                                  setUseEditEndTime(e.target.checked);
-                                  if (!e.target.checked) {
-                                    setEditPEndTime('');
-                                  } else {
-                                    let defaultEnd = '10:00';
-                                    if (editPStartTime) {
-                                      const [h, m] = editPStartTime.split(':').map(Number);
-                                      defaultEnd = `${((h + 1) % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                                    }
-                                    setEditPEndTime(defaultEnd);
-                                  }
-                                }} 
-                                className="w-3.5 h-3.5 rounded border-toss-border text-toss-blue focus:ring-toss-blue"
-                              />
-                              <span className="text-[10.5px] font-semibold text-toss-text-secondary">종료 시간 포함</span>
-                            </label>
+                        <div key={d} className="space-y-2">
+                          <div className="pt-2 pb-1 bg-white z-10 flex items-center">
+                            <span className="text-[10px] font-extrabold text-toss-blue bg-toss-blue-light/70 px-2 py-0.5 rounded-lg shadow-sm">
+                              {dayLabel}{dateLabel}
+                            </span>
                           </div>
-
-                          <div className="grid grid-cols-12 gap-2">
-                            <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
-                              {!editPStartTime ? (
-                                <button 
-                                  type="button" 
-                                  onClick={() => setEditPStartTime('09:00')}
-                                  className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
-                                >
-                                  ⏰ 시작 시간 지정
-                                </button>
-                              ) : (
-                                <TimeInputGroup
-                                  label="시작"
-                                  value={editPStartTime}
-                                  onChange={setEditPStartTime}
-                                  onClear={() => setEditPStartTime('')}
-                                  dropdownId="editStartAmPm"
-                                  activeDropdown={activeDropdown}
-                                  onToggleDropdown={setActiveDropdown}
-                                />
-                              )}
+                          {dayPlaces.length > 0 ? (
+                            <div className="space-y-2.5 pl-2 border-l-2 border-toss-border/60 ml-2 pt-1">
+                              {dayPlaces.map((pl) => renderDesktopPlaceRow(pl))}
                             </div>
-
-                            {useEditEndTime && (
-                              <div className="col-span-6">
-                                {!editPEndTime ? (
-                                  <button 
-                                    type="button" 
-                                    onClick={() => setEditPEndTime('10:00')}
-                                    className="w-full h-[38px] bg-toss-bg hover:bg-toss-border/40 rounded-xl text-[12px] font-semibold text-toss-text-secondary flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-toss-border/50"
-                                  >
-                                    ⏰ 종료 시간 지정
-                                  </button>
-                                ) : (
-                                  <TimeInputGroup
-                                    label="종료"
-                                    value={editPEndTime}
-                                    onChange={setEditPEndTime}
-                                    onClear={() => {
-                                      setEditPEndTime('');
-                                      setUseEditEndTime(false);
-                                    }}
-                                    dropdownId="editEndAmPm"
-                                    activeDropdown={activeDropdown}
-                                    onToggleDropdown={setActiveDropdown}
-                                  />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <input type="text" placeholder="방문지 이름" value={editPName} onChange={e => setEditPName(e.target.value)}
-                            className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" autoFocus />
-                          <input type="text" placeholder="메모" value={editPMemo} onChange={e => setEditPMemo(e.target.value)}
-                            className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" />
-                          <input type="text" placeholder="참고 URL" value={editPUrl} onChange={e => setEditPUrl(e.target.value)}
-                            className="w-full px-3 py-2 bg-white rounded-xl text-[13px] border border-toss-border focus:border-toss-blue outline-none" />
-                          <div className="flex gap-2 pt-1">
-                            <button onClick={cancelEditPlace} className="flex-1 py-2 rounded-xl text-[12px] font-medium text-toss-text-secondary bg-white border border-toss-border">취소</button>
-                            <motion.button whileTap={{ scale: 0.97 }} onClick={() => handleSaveEditPlace(pl.id)} disabled={!editPName.trim()} className="flex-1 py-2 rounded-xl text-[12px] font-semibold text-white bg-toss-blue disabled:opacity-40">저장</motion.button>
-                          </div>
-                        </motion.div>
-                      );
-                    }
-
-                    return (
-                      <motion.div
-                        key={pl.id}
-                        layout
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className={`flex items-start gap-3 p-2.5 rounded-xl ${pl.completed ? 'bg-green-50/50' : 'bg-toss-bg'}`}
-                      >
-                        <motion.button whileTap={{ scale: 0.8 }} onClick={() => onTogglePlace(pl.id)} className="mt-0.5 flex-shrink-0 btn-icon-sm">
-                          {pl.completed ? (
-                            <CheckCircle2 className="w-5 h-5 text-toss-success" />
                           ) : (
-                            <Circle className="w-5 h-5 text-toss-text-tertiary" />
-                          )}
-                        </motion.button>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {pl.time && (
-                              <span className="text-[10px] sm:text-[11px] font-bold bg-toss-blue/10 text-toss-blue px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                                ⏰ {pl.time}
-                              </span>
-                            )}
-                            <p className={`text-[13px] sm:text-[14px] font-medium ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
-                              {pl.name}
-                            </p>
-                          </div>
-                          {pl.memo && (
-                            <p className={`text-[11px] sm:text-[12px] mt-0.5 ${pl.completed ? 'text-toss-text-tertiary' : 'text-toss-text-secondary'}`}>
-                              {pl.memo}
-                            </p>
+                            <p className="text-[11.5px] text-toss-text-tertiary italic pl-4 py-1">방문 장소가 없습니다.</p>
                           )}
                         </div>
-                        {/* Google Maps search button */}
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => handleGoogleMapsSearch(e, pl.name)}
-                          className="p-1.5 rounded-full hover:bg-toss-blue-light flex-shrink-0 btn-icon-sm text-toss-blue"
-                          title="구글맵 길찾기"
-                        >
-                          <Compass className="w-4 h-4" />
-                        </motion.button>
-                        {/* Related URL button */}
-                        {pl.url && (
-                          <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => handleLinkClick(e, pl.url)}
-                            className="p-1.5 rounded-full hover:bg-toss-blue-light flex-shrink-0 btn-icon-sm text-toss-blue"
-                            title="관련 링크 바로가기"
-                          >
-                            <Link2 className="w-4 h-4" />
-                          </motion.button>
-                        )}
-                        {/* Edit button */}
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => { e.stopPropagation(); startEditPlace(pl); }}
-                          className="p-1.5 rounded-full hover:bg-toss-bg flex-shrink-0 btn-icon-sm text-toss-text-secondary"
-                          title="수정"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </motion.button>
-                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => onDeletePlace(pl.id)} className="p-1.5 rounded-full hover:bg-red-50 flex-shrink-0 btn-icon-sm">
-                          <X className="w-3.5 h-3.5 text-toss-text-tertiary" />
-                        </motion.button>
-                      </motion.div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    sortedPlaces.map((pl) => renderDesktopPlaceRow(pl))
+                  )}
+                  {sortedPlaces.length === 0 && !isMultiDay && (
+                    <p className="text-[13px] text-toss-text-tertiary italic text-center py-4">방문지가 없습니다. 아래 버튼으로 추가해보세요!</p>
+                  )}
                 </div>
               ) : (
                 <TravelMap places={sortedPlaces} dateLabel={schedule.title} />
@@ -1618,6 +1799,23 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
 
               {showAdd ? (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-3 p-3.5 bg-toss-bg rounded-xl space-y-2.5">
+                  {isMultiDay && rangeDates.length > 1 && (
+                    <div className="flex flex-col gap-1 mb-2">
+                      <label className="text-[11px] font-bold text-toss-text-secondary">방문 일자</label>
+                      <select 
+                        value={pDate} 
+                        onChange={e => setPDate(e.target.value)}
+                        className="w-full px-3 py-2 bg-white rounded-xl text-[12px] border border-toss-border outline-none focus:border-toss-blue font-semibold"
+                      >
+                        {rangeDates.map((d, i) => (
+                          <option key={d} value={d}>
+                            {i + 1}일차 - {formatDateLabel(d)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-bold text-toss-text-secondary">방문 시간</span>
                     <label className="flex items-center gap-1.5 cursor-pointer select-none">
@@ -1777,7 +1975,19 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
 function ScheduleModal({ schedule, onSave, onClose }) {
   const [title, setTitle] = useState(schedule?.title || '');
   const [date, setDate] = useState(schedule?.date || '');
+  const [isPeriod, setIsPeriod] = useState(() => {
+    if (schedule?.endDate && schedule?.endDate !== schedule?.date) return true;
+    return false;
+  });
+  const [endDate, setEndDate] = useState(schedule?.endDate || schedule?.date || '');
   const [url, setUrl] = useState(schedule?.url || '');
+
+  const handleDateChange = (val) => {
+    setDate(val);
+    if (!isPeriod || !endDate || endDate < val) {
+      setEndDate(val);
+    }
+  };
 
   const save = () => {
     if (!title.trim() || !date) return;
@@ -1785,6 +1995,7 @@ function ScheduleModal({ schedule, onSave, onClose }) {
       ...(schedule || {}),
       title: title.trim(),
       date,
+      endDate: isPeriod ? endDate : date,
       url: url.trim()
     });
   };
@@ -1809,7 +2020,7 @@ function ScheduleModal({ schedule, onSave, onClose }) {
             <motion.button 
               whileTap={{ scale: 0.95 }} 
               onClick={save} 
-              disabled={!title.trim() || !date}
+              disabled={!title.trim() || !date || (isPeriod && !endDate)}
               className="px-3.5 py-1.5 rounded-xl text-[12.5px] font-bold text-white bg-toss-blue hover:bg-toss-blue-dark disabled:opacity-40 shadow-sm transition-colors"
             >
               {schedule ? '수정' : '추가'}
@@ -1824,10 +2035,69 @@ function ScheduleModal({ schedule, onSave, onClose }) {
             <input type="text" placeholder="예: 파리 에펠탑 투어" value={title} onChange={e => setTitle(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" autoFocus />
           </div>
+          
           <div>
-            <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">날짜</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full px-3.5 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" />
+            <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">일정 유형</label>
+            <div className="flex bg-toss-bg p-1 rounded-2xl border border-toss-border/40">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPeriod(false);
+                  setEndDate(date);
+                }}
+                className={`flex-1 py-2 rounded-xl text-[13px] font-bold transition-all ${!isPeriod ? 'bg-white text-toss-blue shadow-sm' : 'text-toss-text-secondary hover:text-toss-text-primary'}`}
+              >
+                하루 (1일)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPeriod(true);
+                  if (!endDate || endDate < date) {
+                    setEndDate(date);
+                  }
+                }}
+                className={`flex-1 py-2 rounded-xl text-[13px] font-bold transition-all ${isPeriod ? 'bg-white text-toss-blue shadow-sm' : 'text-toss-text-secondary hover:text-toss-text-primary'}`}
+              >
+                기간 선택 (1일 이상)
+              </button>
+            </div>
           </div>
+
+          {isPeriod ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">시작일</label>
+                <input 
+                  type="date" 
+                  value={date} 
+                  onChange={e => handleDateChange(e.target.value)} 
+                  className="w-full px-3.5 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" 
+                />
+              </div>
+              <div>
+                <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">종료일</label>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  min={date}
+                  onChange={e => setEndDate(e.target.value)} 
+                  className="w-full px-3.5 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" 
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">날짜</label>
+              <input 
+                type="date" 
+                value={date} 
+                onChange={e => handleDateChange(e.target.value)} 
+                className="w-full px-3.5 py-2.5 bg-toss-bg rounded-xl text-[14px] border-0 outline-none focus:ring-2 focus:ring-toss-blue/20 transition-all" 
+              />
+            </div>
+          )}
+
           <div>
             <label className="text-[12px] font-semibold text-toss-text-secondary mb-1 block">참고 URL (선택)</label>
             <input type="text" placeholder="예: google.com 또는 https://maps.google.com" value={url} onChange={e => setUrl(e.target.value)}
