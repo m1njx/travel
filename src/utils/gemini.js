@@ -422,6 +422,12 @@ export async function searchNearbyRestaurantsWithGemini(latitude, longitude, loc
 - 위치명: ${locationName || '알 수 없음'}
 
 [요구사항]
+⚠️ 매우 중요 (CRITICAL) ⚠️
+제공된 위도/경도(${latitude}, ${longitude}) 및 위치명(${locationName})을 정확히 기준으로 삼으세요.
+반드시 도보로 이동 가능한 반경 1km 이내(최대 1.5km)의 식당만 엄격하게 선별해야 합니다.
+절대로 해당 범위를 벗어난 먼 거리의 식당(예: 다른 지역, 차로 이동해야 하는 거리)을 포함하지 마세요.
+distance 필드는 실제 위도/경도 기준 직선거리를 미터(m) 단위로 최대한 정확히 추정하여 기재하세요.
+
 1. Google 평점 4.0 이상인 맛집과 3.5 이상인 맛집을 구분하여 추천해주세요.
 2. 각 식당에 대해 다음 정보를 포함해주세요:
    - name: 식당 이름 (현지어 + 한국어 번역)
@@ -432,6 +438,8 @@ export async function searchNearbyRestaurantsWithGemini(latitude, longitude, loc
    - signatureMenu: 식당의 추천 대표 메뉴 이름 (현지 음식일 경우 한국어로 번역해서 기재, 예: "트러플 까르보나라")
    - signaturePrice: 대표 메뉴의 대략적인 가격 (구글맵 기준 현지 통화 단위 포함, 예: "€15", "£12")
    - distance: 현재 위치에서의 대략적 거리 (미터 단위 숫자)
+   - lat: 식당의 정확한 위도 좌표 (숫자)
+   - lng: 식당의 정확한 경도 좌표 (숫자)
    - address: 간단한 주소
    - tip: 한국 여행자를 위한 팁 (한국어 1문장)
 3. 최소 5개, 최대 15개의 식당을 추천해주세요.
@@ -453,6 +461,8 @@ export async function searchNearbyRestaurantsWithGemini(latitude, longitude, loc
       "signatureMenu": "해산물 링귀니",
       "signaturePrice": "€18",
       "distance": 450,
+      "lat": 41.9028,
+      "lng": 12.4964,
       "address": "Via Roma 12, Rome",
       "tip": "점심 세트 메뉴가 저녁 대비 30% 저렴합니다"
     }
@@ -515,11 +525,42 @@ ratingTier 규칙:
       try {
         const cleanedText = textResponse.trim().replace(/^```json\s*/i, '').replace(/```$/, '').trim();
         const parsed = JSON.parse(cleanedText);
+        
+        // 하버사인 공식(Haversine formula)으로 실제 거리 계산 및 필터링
+        if (parsed && Array.isArray(parsed.restaurants)) {
+          const R = 6371e3; // 지구 반경 (미터)
+          const toRad = (value) => value * Math.PI / 180;
+          const lat1 = latitude;
+          const lon1 = longitude;
+          
+          parsed.restaurants = parsed.restaurants.map(rest => {
+            if (rest.lat && rest.lng) {
+              const lat2 = rest.lat;
+              const lon2 = rest.lng;
+              const dLat = toRad(lat2 - lat1);
+              const dLon = toRad(lon2 - lon1);
+              const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                        Math.sin(dLon/2) * Math.sin(dLon/2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              const realDistance = Math.round(R * c);
+              
+              // 모델이 추정한 거리 대신 실제 거리를 적용
+              rest.distance = realDistance;
+            }
+            return rest;
+          }).filter(rest => rest.distance <= 1500); // 1.5km 이내만 통과
+        }
+        
+        if (parsed.restaurants.length === 0) {
+          throw new Error('1.5km 반경 내에 검색된 맛집이 없습니다.');
+        }
+
         console.log(`Successfully found nearby restaurants using model: ${model}`);
         return parsed;
       } catch (e) {
-        console.warn(`Failed to parse JSON from model ${model}. Trying next...`, e);
-        lastError = new Error(`JSON parse error in model ${model}`);
+        console.warn(`Failed to parse JSON or no valid restaurants from model ${model}. Trying next...`, e);
+        lastError = new Error(e.message || `JSON parse error in model ${model}`);
         continue;
       }
     } catch (error) {
