@@ -514,7 +514,7 @@ export default function App() {
 
       {/* Mobile Bottom Tab Bar (hidden on desktop) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-toss-border safe-bottom z-50">
-        <div className="flex">
+        <div className="flex overflow-x-auto scrollbar-none">
           {activeTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -523,7 +523,7 @@ export default function App() {
                 key={tab.id}
                 whileTap={{ scale: 0.92 }}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex-1 flex flex-col items-center py-3 relative"
+                className={`flex flex-col items-center py-3 relative ${activeTabs.length > 6 ? 'min-w-[60px] px-2' : 'flex-1'}`}
               >
                 <div className="relative">
                   <Icon
@@ -540,7 +540,7 @@ export default function App() {
                   )}
                 </div>
                 <span
-                  className={`text-[10px] mt-1 font-medium transition-colors duration-200 ${
+                  className={`text-[10px] mt-1 font-medium transition-colors duration-200 whitespace-nowrap ${
                     isActive ? 'text-toss-blue' : 'text-toss-text-tertiary'
                   }`}
                 >

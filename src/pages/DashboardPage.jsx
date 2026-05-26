@@ -910,7 +910,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="bg-toss-blue-light text-toss-blue text-[11px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                          📅 {schedule.date}의 일정
+                          📅 {formatDateLabel(schedule.date)}의 일정
                         </span>
                       </div>
                       <span className="text-[11px] text-toss-text-tertiary font-extrabold ml-auto">

@@ -209,7 +209,7 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
   return (
     <div className="pb-6">
       {/* Tab Navigation (shown both desktop and mobile) */}
-      <div className="flex gap-2 border-b border-toss-border px-4 sm:px-5 py-3 bg-white sticky top-0 z-20">
+      <div className="flex gap-2 border-b border-toss-border px-4 sm:px-5 py-3 bg-white md:sticky md:top-0 z-20">
         <button
           onClick={() => setActiveTab('history')}
           className={`px-4 py-2 rounded-lg font-bold text-[14px] transition-all ${

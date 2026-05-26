@@ -1039,10 +1039,21 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
           <div className="flex-1 min-w-0">
             <div className="flex flex-col gap-1">
               {pl.time && (
-                <div className="self-start">
-                  <span className="inline-flex items-center gap-0.5 text-[9.5px] font-extrabold bg-toss-blue/5 text-toss-blue px-2 py-0.5 rounded-md">
-                    ⏰ {pl.time}
-                  </span>
+                <div className="self-start flex flex-col gap-0.5">
+                  {pl.time.includes('~') ? (
+                    <>
+                      <span className="inline-flex items-center gap-0.5 text-[9.5px] font-extrabold bg-toss-blue/5 text-toss-blue px-2 py-0.5 rounded-md">
+                        ⏰ 시작 {pl.time.split('~')[0].trim()}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-[9.5px] font-extrabold bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-md">
+                        ⏰ 종료 {pl.time.split('~')[1].trim()}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-extrabold bg-toss-blue/5 text-toss-blue px-2 py-0.5 rounded-md">
+                      ⏰ {pl.time}
+                    </span>
+                  )}
                 </div>
               )}
               <p className={`text-[13px] font-bold tracking-tight leading-snug break-all ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
@@ -1229,9 +1240,22 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {pl.time && (
-              <span className="text-[10px] sm:text-[11px] font-bold bg-toss-blue/10 text-toss-blue px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                ⏰ {pl.time}
-              </span>
+              <div className="flex flex-wrap gap-1">
+                {pl.time.includes('~') ? (
+                  <>
+                    <span className="text-[10px] sm:text-[11px] font-bold bg-toss-blue/10 text-toss-blue px-2 py-0.5 rounded-md flex items-center gap-0.5">
+                      ⏰ 시작 {pl.time.split('~')[0].trim()}
+                    </span>
+                    <span className="text-[10px] sm:text-[11px] font-bold bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-md flex items-center gap-0.5">
+                      ⏰ 종료 {pl.time.split('~')[1].trim()}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[10px] sm:text-[11px] font-bold bg-toss-blue/10 text-toss-blue px-2 py-0.5 rounded-md flex items-center gap-0.5">
+                    ⏰ {pl.time}
+                  </span>
+                )}
+              </div>
             )}
             <p className={`text-[13px] sm:text-[14px] font-medium ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
               {pl.name}
@@ -1311,11 +1335,11 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
               )}
               {schedule.endDate && schedule.endDate !== schedule.date ? (
                 <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full whitespace-nowrap">
-                  📅 {schedule.date} ~ {schedule.endDate}
+                  📅 {formatDateLabel(schedule.date)} ~ {formatDateLabel(schedule.endDate)}
                 </span>
               ) : (
                 <span className="text-[10px] font-extrabold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full whitespace-nowrap">
-                  📅 {schedule.date}
+                  📅 {formatDateLabel(schedule.date)}
                 </span>
               )}
             </div>
@@ -1671,11 +1695,11 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
             )}
             {schedule.endDate && schedule.endDate !== schedule.date ? (
               <span className="text-[10px] sm:text-[11px] font-medium bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full whitespace-nowrap">
-                📅 {schedule.date} ~ {schedule.endDate}
+                📅 {formatDateLabel(schedule.date)} ~ {formatDateLabel(schedule.endDate)}
               </span>
             ) : (
               <span className="text-[10px] sm:text-[11px] font-medium text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full whitespace-nowrap">
-                📅 {schedule.date}
+                📅 {formatDateLabel(schedule.date)}
               </span>
             )}
           </div>
