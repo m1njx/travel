@@ -629,6 +629,11 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
         </motion.div>
       </div>
 
+      {/* Nearby Restaurants Section - Desktop (Full width between grids) */}
+      <motion.div variants={itemVariants} className="w-full">
+        <NearbyRestaurants apiKey={apiKey} />
+      </motion.div>
+
       {/* Grid: Timeline and AI Recommendations */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
         {/* Left Side (8/12 col): Timeline Course */}
@@ -800,11 +805,6 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
               </button>
             )}
           </div>
-        </motion.div>
-
-        {/* Nearby Restaurants Section - Desktop (right column) */}
-        <motion.div variants={itemVariants} className="md:col-span-5">
-          <NearbyRestaurants apiKey={apiKey} />
         </motion.div>
       </div>
       </div> {/* END OF DESKTOP UI */}

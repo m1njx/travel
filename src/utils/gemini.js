@@ -418,6 +418,8 @@ export async function searchNearbyRestaurantsWithGemini(latitude, longitude, loc
    - cuisine: 요리 종류 (예: 이탈리안, 프렌치, 한식 등)
    - priceRange: 가격대 (€, €€, €€€ 중 하나)
    - specialty: 대표 메뉴 또는 특징 (한국어 1~2문장)
+   - signatureMenu: 식당의 추천 대표 메뉴 이름 (현지 음식일 경우 한국어로 번역해서 기재, 예: "트러플 까르보나라")
+   - signaturePrice: 대표 메뉴의 대략적인 가격 (구글맵 기준 현지 통화 단위 포함, 예: "€15", "£12")
    - distance: 현재 위치에서의 대략적 거리 (미터 단위 숫자)
    - address: 간단한 주소
    - tip: 한국 여행자를 위한 팁 (한국어 1문장)
@@ -436,9 +438,11 @@ export async function searchNearbyRestaurantsWithGemini(latitude, longitude, loc
       "ratingTier": "premium",
       "cuisine": "이탈리안",
       "priceRange": "€€",
-      "specialty": "수제 파스타와 신선한 해산물이 유명한 로컬 맛집",
-      "distance": 350,
-      "address": "Via Roma 123",
+      "specialty": "현지인이 추천하는 정통 해산물 파스타 맛집",
+      "signatureMenu": "해산물 링귀니",
+      "signaturePrice": "€18",
+      "distance": 450,
+      "address": "Via Roma 12, Rome",
       "tip": "점심 세트 메뉴가 저녁 대비 30% 저렴합니다"
     }
   ]

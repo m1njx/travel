@@ -151,6 +151,20 @@ function RestaurantCard({ restaurant, index }) {
                 <p className="text-[12px] text-toss-text-primary leading-relaxed">{restaurant.specialty}</p>
               </div>
 
+              {/* Signature Menu & Price */}
+              {(restaurant.signatureMenu || restaurant.signaturePrice) && (
+                <div className="flex items-start gap-2 bg-purple-50/50 rounded-lg p-2.5">
+                  <span className="text-[12px] shrink-0 mt-0.5">🍽️</span>
+                  <div className="flex-1">
+                    <p className="text-[11.5px] font-bold text-toss-text-primary">
+                      {restaurant.signatureMenu} 
+                      {restaurant.signaturePrice && <span className="text-toss-blue ml-1.5">{restaurant.signaturePrice}</span>}
+                    </p>
+                    <p className="text-[10px] text-toss-text-tertiary mt-0.5">AI 추천 대표 메뉴</p>
+                  </div>
+                </div>
+              )}
+
               {/* Address */}
               <div className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-toss-text-tertiary shrink-0 mt-0.5" />
