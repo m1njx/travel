@@ -905,7 +905,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                     {/* Places Preview */}
                     {schedule.places && schedule.places.length > 0 ? (
                       <div className="bg-toss-bg/30 p-3 rounded-2xl space-y-1.5 border border-toss-border/20">
-                        {schedule.places.slice(0, 3).map((place, idx) => (
+                        {schedule.places.map((place, idx) => (
                           <div key={place.id} className="flex items-center gap-2 text-[12px] text-toss-text-secondary group">
                             <button
                               type="button"
@@ -934,9 +934,6 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                             )}
                           </div>
                         ))}
-                        {schedule.places.length > 3 && (
-                          <p className="text-[11px] text-toss-text-tertiary pl-5 font-semibold pt-0.5">외 {schedule.places.length - 3}개 코스가 더 있습니다.</p>
-                        )}
                       </div>
                     ) : (
                       <p className="text-[12px] text-toss-text-tertiary italic">등록된 세부 코스 정보가 없습니다.</p>

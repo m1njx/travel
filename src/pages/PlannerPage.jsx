@@ -1310,11 +1310,11 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                 </span>
               )}
               {schedule.endDate && schedule.endDate !== schedule.date ? (
-                <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full whitespace-nowrap">
                   📅 {schedule.date} ~ {schedule.endDate}
                 </span>
               ) : (
-                <span className="text-[10px] font-extrabold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-extrabold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full whitespace-nowrap">
                   📅 {schedule.date}
                 </span>
               )}
@@ -1652,11 +1652,11 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
               </span>
             )}
             {schedule.endDate && schedule.endDate !== schedule.date ? (
-              <span className="text-[10px] sm:text-[11px] font-medium bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] sm:text-[11px] font-medium bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full whitespace-nowrap">
                 📅 {schedule.date} ~ {schedule.endDate}
               </span>
             ) : (
-              <span className="text-[10px] sm:text-[11px] font-medium text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
+              <span className="text-[10px] sm:text-[11px] font-medium text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full whitespace-nowrap">
                 📅 {schedule.date}
               </span>
             )}
