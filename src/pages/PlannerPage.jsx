@@ -1326,33 +1326,49 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                 onClick={(e) => handleLinkClick(e, schedule.url)}
                 className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 bg-toss-blue/5 text-toss-blue text-[11px] font-bold rounded-lg active:bg-toss-blue/10 transition-colors"
               >
-                <Link2 className="w-3 h-3" />
+                <Link2 className="w-3.5 h-3.5" />
                 참고 링크
                 <ExternalLink className="w-2.5 h-2.5 opacity-60" />
               </button>
             )}
 
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {total > 0 && (
-                <p className="text-[11.5px] font-semibold text-toss-text-secondary">📍 코스 {done}/{total}개</p>
-              )}
-              {schedule.createdBy && (
-                <p className="text-[11px] font-bold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
-                  👤 {schedule.createdBy}
-                </p>
-              )}
+            <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {total > 0 && (
+                  <p className="text-[11.5px] font-semibold text-toss-text-secondary">📍 코스 {done}/{total}개</p>
+                )}
+                {schedule.createdBy && (
+                  <p className="text-[11px] font-bold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
+                    👤 {schedule.createdBy}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-1.5 ml-auto" onClick={(e) => e.stopPropagation()}>
+                <button 
+                  onClick={onEdit} 
+                  className="w-7 h-7 rounded-xl bg-toss-bg hover:bg-toss-border/40 active:scale-95 flex items-center justify-center text-toss-text-secondary transition-all"
+                  title="일정 수정"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+                <button 
+                  onClick={onDelete} 
+                  className="w-7 h-7 rounded-xl bg-red-50 hover:bg-red-100 active:scale-95 flex items-center justify-center text-toss-danger transition-all"
+                  title="일정 삭제"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0 ml-2">
-            <button onClick={onEdit} className="w-8 h-8 rounded-full hover:bg-toss-bg active:bg-toss-bg flex items-center justify-center text-toss-text-secondary">
-              <Edit3 className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={onDelete} className="w-8 h-8 rounded-full hover:bg-red-50 active:bg-red-50 flex items-center justify-center text-toss-danger">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => setIsExpanded(!isExpanded)} className="w-8 h-8 rounded-full hover:bg-toss-bg active:bg-toss-bg flex items-center justify-center text-toss-text-secondary">
-              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          <div className="flex items-center shrink-0 ml-2">
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)} 
+              className="w-8 h-8 rounded-full hover:bg-toss-bg active:bg-toss-bg flex items-center justify-center text-toss-text-secondary"
+            >
+              {isExpanded ? <ChevronUp className="w-4.5 h-4.5" /> : <ChevronDown className="w-4.5 h-4.5" />}
             </button>
           </div>
         </div>

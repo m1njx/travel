@@ -42,6 +42,27 @@ const getWeatherDetails = (code) => {
   return WMO_WEATHER_MAP[code] || { label: '날씨 정보 없음', icon: Cloud, color: 'text-slate-400', bg: 'bg-slate-400/10' };
 };
 
+const getDatesInRange = (startDate, endDate) => {
+  if (!startDate) return [];
+  if (!endDate || startDate === endDate) return [startDate];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const dates = [];
+  let current = new Date(start);
+  while (current <= end) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+};
+
+const formatDateLabel = (dateStr) => {
+  if (!dateStr || dateStr === '날짜 미정') return '날짜 미정';
+  const dt = new Date(dateStr);
+  const wk = ['일', '월', '화', '수', '목', '금', '토'];
+  return `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${wk[dt.getDay()]})`;
+};
+
 const DEFAULT_TIPS = [
   "✈️ 여권 사본을 이메일이나 클라우드에 업로드해두면 현지 분실 시 재발급 시간을 대폭 단축할 수 있습니다.",
   "💳 유럽 식당 및 매장 결제 시 현지 통화(EUR 등)를 선택해야 이중 환전 수수료(DCC) 폭탄을 피할 수 있습니다.",
@@ -904,36 +925,111 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
 
                     {/* Places Preview */}
                     {schedule.places && schedule.places.length > 0 ? (
-                      <div className="bg-toss-bg/30 p-3 rounded-2xl space-y-1.5 border border-toss-border/20">
-                        {schedule.places.map((place, idx) => (
-                          <div key={place.id} className="flex items-center gap-2 text-[12px] text-toss-text-secondary group">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const updatedPlaces = schedule.places.map(p =>
-                                  p.id === place.id ? { ...p, completed: !p.completed } : p
-                                );
-                                schedulesSync.updateItem({ ...schedule, places: updatedPlaces });
-                              }}
-                              className="shrink-0 transition-all active:scale-90"
-                            >
-                              {place.completed ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                              ) : (
-                                <Circle className="w-4 h-4 text-toss-border/40 group-hover:text-toss-blue/50" />
-                              )}
-                            </button>
-                            <span className={`font-semibold truncate flex-1 transition-all ${place.completed ? 'line-through text-toss-text-tertiary/50' : ''}`}>
-                              {place.name}
-                            </span>
-                            {place.time && (
-                              <span className="text-[10px] text-toss-blue font-bold bg-white border border-toss-blue/20 px-1.5 py-0.5 rounded-lg">
-                                ⏰ {place.time}
+                      <div className="bg-toss-bg/30 p-3 rounded-2xl space-y-2.5 border border-toss-border/20">
+                        {(() => {
+                          const sortedPlaces = [...schedule.places].sort((a, b) => {
+                            const dateA = a.date || schedule.date;
+                            const dateB = b.date || schedule.date;
+                            const dateCompare = dateA.localeCompare(dateB);
+                            if (dateCompare !== 0) return dateCompare;
+
+                            if (!a.time && !b.time) return 0;
+                            if (!a.time) return 1;
+                            if (!b.time) return -1;
+                            return a.time.localeCompare(b.time);
+                          });
+
+                          const isMultiDay = schedule.endDate && schedule.endDate !== schedule.date;
+
+                          if (isMultiDay) {
+                            const placesByDate = sortedPlaces.reduce((acc, p) => {
+                              const d = p.date || schedule.date;
+                              if (!acc[d]) acc[d] = [];
+                              acc[d].push(p);
+                              return acc;
+                            }, {});
+
+                            const activeDates = Object.keys(placesByDate).sort((a, b) => a.localeCompare(b));
+
+                            const getDayNumber = (currentDateStr) => {
+                              const start = new Date(schedule.date);
+                              const curr = new Date(currentDateStr);
+                              const diffTime = curr - start;
+                              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                              return diffDays > 0 ? `${diffDays}일차` : '';
+                            };
+
+                            return activeDates.map((dateStr) => (
+                              <div key={dateStr} className="space-y-1.5 pt-1.5 first:pt-0 border-t first:border-t-0 border-toss-border/35">
+                                <div className="inline-flex items-center gap-1 text-[10px] font-extrabold text-toss-blue bg-toss-blue-light/50 px-2 py-0.5 rounded-lg">
+                                  📅 {getDayNumber(dateStr)} - {formatDateLabel(dateStr)}
+                                </div>
+                                <div className="pl-1.5 space-y-1.5">
+                                  {placesByDate[dateStr].map((place) => (
+                                    <div key={place.id} className="flex items-center gap-2 text-[12px] text-toss-text-secondary group">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const updatedPlaces = schedule.places.map(p =>
+                                            p.id === place.id ? { ...p, completed: !p.completed } : p
+                                          );
+                                          schedulesSync.updateItem({ ...schedule, places: updatedPlaces });
+                                        }}
+                                        className="shrink-0 transition-all active:scale-90"
+                                      >
+                                        {place.completed ? (
+                                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                        ) : (
+                                          <Circle className="w-4 h-4 text-toss-border/40 group-hover:text-toss-blue/50" />
+                                        )}
+                                      </button>
+                                      <span className={`font-semibold truncate flex-1 transition-all ${place.completed ? 'line-through text-toss-text-tertiary/50' : ''}`}>
+                                        {place.name}
+                                      </span>
+                                      {place.time && (
+                                        <span className="text-[10px] text-toss-blue font-bold bg-white border border-toss-blue/20 px-1.5 py-0.5 rounded-lg">
+                                          ⏰ {place.time}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ));
+                          }
+
+                          // Single day rendering (original style)
+                          return sortedPlaces.map((place) => (
+                            <div key={place.id} className="flex items-center gap-2 text-[12px] text-toss-text-secondary group">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updatedPlaces = schedule.places.map(p =>
+                                    p.id === place.id ? { ...p, completed: !p.completed } : p
+                                  );
+                                  schedulesSync.updateItem({ ...schedule, places: updatedPlaces });
+                                }}
+                                className="shrink-0 transition-all active:scale-90"
+                              >
+                                {place.completed ? (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                ) : (
+                                  <Circle className="w-4 h-4 text-toss-border/40 group-hover:text-toss-blue/50" />
+                                )}
+                              </button>
+                              <span className={`font-semibold truncate flex-1 transition-all ${place.completed ? 'line-through text-toss-text-tertiary/50' : ''}`}>
+                                {place.name}
                               </span>
-                            )}
-                          </div>
-                        ))}
+                              {place.time && (
+                                <span className="text-[10px] text-toss-blue font-bold bg-white border border-toss-blue/20 px-1.5 py-0.5 rounded-lg">
+                                  ⏰ {place.time}
+                                </span>
+                              )}
+                            </div>
+                          ));
+                        })()}
                       </div>
                     ) : (
                       <p className="text-[12px] text-toss-text-tertiary italic">등록된 세부 코스 정보가 없습니다.</p>
