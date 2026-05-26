@@ -10,6 +10,7 @@ import {
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
 import { getAITravelTip } from '../utils/gemini';
+import NearbyRestaurants from '../components/NearbyRestaurants';
 
 const WMO_WEATHER_MAP = {
   0: { label: '맑음', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -800,6 +801,11 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             )}
           </div>
         </motion.div>
+      {/* Nearby Restaurants Section - Desktop */}
+      <motion.div variants={itemVariants}>
+        <NearbyRestaurants apiKey={apiKey} />
+      </motion.div>
+
       </div>
       </div> {/* END OF DESKTOP UI */}
 
@@ -1071,6 +1077,11 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
                 <p className="text-[13px] text-toss-text-secondary font-medium">진행 중인 일정이 없습니다. 플래너에서 일정을 등록해보세요!</p>
               </div>
             )}
+          </div>
+
+          {/* Nearby Restaurants Section - Mobile */}
+          <div className="px-4 mt-4">
+            <NearbyRestaurants apiKey={apiKey} />
           </div>
         </div>
       </div>

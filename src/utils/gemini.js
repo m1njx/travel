@@ -373,3 +373,127 @@ Example response format:
 
   throw lastError || new Error('Gemini API 실시간 환율 검색에 실패했습니다.');
 }
+
+/**
+ * Search for nearby restaurants based on GPS coordinates using Gemini.
+ * Uses reverse-geocoded location info to find restaurants within radius.
+ * @param {number} latitude
+ * @param {number} longitude
+ * @param {string} locationName - reverse geocoded address / area name
+ * @param {string} apiKey - Gemini API key
+ * @returns {Promise<Object>} - { restaurants: [...], searchRadius, locationName }
+ */
+export async function searchNearbyRestaurantsWithGemini(latitude, longitude, locationName, apiKey) {
+  if (!apiKey) {
+    throw new Error('API key가 없습니다. 설정 페이지에서 Gemini API key를 등록해주세요.');
+  }
+
+  const prompt = `
+당신은 유럽 현지 맛집 전문 가이드입니다.
+아래의 GPS 좌표와 위치 정보를 기반으로, 해당 위치에서 반경 1km 이내에 있는 맛집들을 추천해주세요.
+만약 1km 이내 맛집이 10개 미만이라면, 반경 1.5km까지 확장하여 추천해주세요.
+
+[현재 위치 정보]
+- GPS 좌표: 위도 ${latitude}, 경도 ${longitude}
+- 위치명: ${locationName || '알 수 없음'}
+
+[요구사항]
+1. Google 평점 4.0 이상인 맛집과 3.5 이상인 맛집을 구분하여 추천해주세요.
+2. 각 식당에 대해 다음 정보를 포함해주세요:
+   - name: 식당 이름 (현지어 + 한국어 번역)
+   - rating: Google 예상 평점 (숫자)
+   - cuisine: 요리 종류 (예: 이탈리안, 프렌치, 한식 등)
+   - priceRange: 가격대 (€, €€, €€€ 중 하나)
+   - specialty: 대표 메뉴 또는 특징 (한국어 1~2문장)
+   - distance: 현재 위치에서의 대략적 거리 (미터 단위 숫자)
+   - address: 간단한 주소
+   - tip: 한국 여행자를 위한 팁 (한국어 1문장)
+3. 최소 5개, 최대 15개의 식당을 추천해주세요.
+4. 실제로 존재할 법한 식당을 추천해주세요. 해당 지역의 유명하고 인기 있는 실제 식당 위주로 추천해주세요.
+
+응답은 반드시 마크다운 코드 블록 없는 순수 JSON 형태여야 하며, 다음 포맷이어야 합니다:
+{
+  "searchRadius": 1000,
+  "locationName": "위치명",
+  "restaurants": [
+    {
+      "name": "식당 이름 (현지어)",
+      "nameKo": "식당 이름 (한국어)",
+      "rating": 4.5,
+      "ratingTier": "premium",
+      "cuisine": "이탈리안",
+      "priceRange": "€€",
+      "specialty": "수제 파스타와 신선한 해산물이 유명한 로컬 맛집",
+      "distance": 350,
+      "address": "Via Roma 123",
+      "tip": "점심 세트 메뉴가 저녁 대비 30% 저렴합니다"
+    }
+  ]
+}
+
+ratingTier 규칙:
+- 평점 4.0 이상: "premium"
+- 평점 3.5 이상 ~ 4.0 미만: "good"
+`;
+
+  let lastError = null;
+
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const model = GEMINI_MODELS[i];
+    console.log(`Attempting nearby restaurant search with model: ${model}`);
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      if (response.status === 404 || response.status === 400) {
+        console.warn(`Model ${model} is not available (Status ${response.status}). Trying fallback...`);
+        lastError = new Error(`Model ${model} returned ${response.status}`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.warn(`Model ${model} failed with HTTP ${response.status}:`, errText);
+        lastError = new Error(`HTTP Error ${response.status}: ${errText}`);
+        continue;
+      }
+
+      const result = await response.json();
+      const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!textResponse) {
+        console.warn(`Model ${model} response was empty. Trying next...`);
+        lastError = new Error(`Empty response from ${model}`);
+        continue;
+      }
+
+      try {
+        const cleanedText = textResponse.trim().replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        const parsed = JSON.parse(cleanedText);
+        console.log(`Successfully found nearby restaurants using model: ${model}`);
+        return parsed;
+      } catch (e) {
+        console.warn(`Failed to parse JSON from model ${model}. Trying next...`, e);
+        lastError = new Error(`JSON parse error in model ${model}`);
+        continue;
+      }
+    } catch (error) {
+      console.warn(`Network/Request error using model ${model}:`, error);
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('주변 맛집 검색에 실패했습니다.');
+}
