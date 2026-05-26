@@ -4,6 +4,7 @@
 
 const GEMINI_MODELS = [
   'gemini-2.5-flash',
+  'gemini-2.0-flash',
   'gemini-1.5-flash'
 ];
 
@@ -71,7 +72,7 @@ Format:
       });
 
       // If the model name is unsupported (usually 404 or 400), try the next model
-      if (response.status === 404 || response.status === 400) {
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         console.warn(`Model ${model} is not available (Status ${response.status}). Trying fallback...`);
         lastError = new Error(`Model ${model} returned ${response.status}`);
         continue; 
@@ -181,7 +182,7 @@ ${places.map((p, i) => `${i + 1}. 이름: "${p.name}", 메모: "${p.memo || '없
         }),
       });
 
-      if (response.status === 404 || response.status === 400) {
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         console.warn(`Model ${model} is not available (Status ${response.status}). Trying fallback...`);
         lastError = new Error(`Model ${model} returned ${response.status}`);
         continue;
@@ -260,7 +261,7 @@ export async function getAITravelTip(schedules, checklists, expenses, apiKey) {
         }),
       });
 
-      if (response.status === 404 || response.status === 400) {
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         lastError = new Error(`Model ${model} returned ${response.status}`);
         continue;
       }
@@ -333,7 +334,7 @@ Example response format:
         }),
       });
 
-      if (response.status === 404 || response.status === 400) {
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         lastError = new Error(`Model ${model} returned ${response.status}`);
         continue;
       }
@@ -457,7 +458,7 @@ ratingTier 규칙:
         }),
       });
 
-      if (response.status === 404 || response.status === 400) {
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         console.warn(`Model ${model} is not available (Status ${response.status}). Trying fallback...`);
         lastError = new Error(`Model ${model} returned ${response.status}`);
         continue;

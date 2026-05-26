@@ -801,11 +801,11 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             )}
           </div>
         </motion.div>
-      {/* Nearby Restaurants Section - Desktop */}
-      <motion.div variants={itemVariants}>
-        <NearbyRestaurants apiKey={apiKey} />
-      </motion.div>
 
+        {/* Nearby Restaurants Section - Desktop (right column) */}
+        <motion.div variants={itemVariants} className="md:col-span-5">
+          <NearbyRestaurants apiKey={apiKey} />
+        </motion.div>
       </div>
       </div> {/* END OF DESKTOP UI */}
 
@@ -881,7 +881,10 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           </div>
         </div>
 
-
+        {/* Nearby Restaurants Section - Mobile */}
+        <div className="px-5 mt-4">
+          <NearbyRestaurants apiKey={apiKey} />
+        </div>
 
         {/* Active Schedules Feed */}
         <div className="flex flex-col mt-5">
@@ -1079,10 +1082,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             )}
           </div>
 
-          {/* Nearby Restaurants Section - Mobile */}
-          <div className="px-4 mt-4">
-            <NearbyRestaurants apiKey={apiKey} />
-          </div>
+
         </div>
       </div>
 
