@@ -543,6 +543,31 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
         </div>
       </motion.div>
 
+      {/* AI Radar Quick Banner (Desktop) */}
+      <motion.div
+        variants={itemVariants}
+        whileHover={{ scale: 1.01, y: -1 }}
+        whileTap={{ scale: 0.99 }}
+        onClick={handleOpenRadar}
+        className="bg-gradient-to-r from-toss-blue via-indigo-600 to-violet-600 rounded-3xl p-5 text-white flex items-center justify-between shadow-md hover:shadow-lg cursor-pointer relative overflow-hidden transition-all duration-200"
+      >
+        <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+        <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-[24px] animate-pulse">
+            📡
+          </div>
+          <div>
+            <h3 className="text-[16px] font-black tracking-tight text-white/95 flex items-center gap-2">
+              내 주변 AI 레이더 켜기
+              <span className="text-[10px] font-bold bg-white/25 text-white px-2 py-0.5 rounded-lg tracking-normal">Beta</span>
+            </h3>
+            <p className="text-[12px] text-white/80 font-medium mt-0.5">내 실시간 GPS 좌표 반경 1km 이내 최고의 맛집, 카페, 관광 명소 실시간 스캔</p>
+          </div>
+        </div>
+        <ChevronRight className="w-6 h-6 text-white/80 shrink-0" />
+      </motion.div>
+
       {/* Grid: 3 Core Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Widget 1: D-Day Countdown Card */}
