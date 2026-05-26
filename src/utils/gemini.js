@@ -377,3 +377,90 @@ Example response format:
 
   throw lastError || new Error('Gemini API 실시간 환율 검색에 실패했습니다.');
 }
+
+/**
+ * Search Google for live local spots near coordinates using Gemini Search Grounding
+ */
+export async function getNearbySpotsWithGemini(lat, lng, apiKey) {
+  if (!apiKey) {
+    throw new Error('API key가 없습니다. 설정 페이지에서 Gemini API key를 등록해주세요.');
+  }
+
+  const prompt = `
+You are an expert local tour guide.
+The user is currently at GPS coordinates: Latitude ${lat}, Longitude ${lng}.
+Use Google Search to find the absolute best, highly-rated (4.3+ stars) tourist attractions, restaurants, and cafes within a 1km radius of this exact location right now.
+
+You must find exactly 4 nearby spots (a nice mix of attractions, restaurants, and cafes).
+For each spot, provide:
+1. "name": Name of the spot in Korean.
+2. "category": One of "attraction", "restaurant", "cafe".
+3. "distance": Approximate distance or walking time from the coordinates (e.g. "도보 5분 (300m)").
+4. "description": A highly useful 1-sentence tip or description in Korean (e.g. "크루아상이 맛있으나 웨이팅 있음", "현지인 최애 파스타 맛집").
+5. "googleMapUrl": The direct Google Maps search URL to find this place (e.g. "https://www.google.com/maps/search/?api=1&query=London+Eye").
+
+Your response must be a single valid JSON array containing exactly 4 objects. Do not include markdown code block syntax (like \`\`\`json).
+Format:
+[
+  {
+    "name": "런던 아이",
+    "category": "attraction",
+    "distance": "도보 5분 (300m)",
+    "description": "야경 명소이나 대기줄이 매우 길어 사전 예약 필수입니다.",
+    "googleMapUrl": "https://www.google.com/maps/search/?api=1&query=London+Eye"
+  }
+]
+`;
+
+  let lastError = null;
+
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const model = GEMINI_MODELS[i];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ googleSearch: {} }], // Enable Search Grounding!
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      if (response.status === 404 || response.status === 400) {
+        lastError = new Error(`Model ${model} returned ${response.status}`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errText = await response.text();
+        lastError = new Error(`HTTP Error ${response.status}: ${errText}`);
+        continue;
+      }
+
+      const result = await response.json();
+      const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (textResponse) {
+        const cleanedText = textResponse.trim().replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        const parsed = JSON.parse(cleanedText);
+        
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        } else {
+          throw new Error('Invalid JSON format returned from Gemini');
+        }
+      }
+    } catch (error) {
+      console.error(`Gemini spot search with ${model} failed:`, error);
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Gemini API 주변 탐색 검색에 실패했습니다.');
+}
