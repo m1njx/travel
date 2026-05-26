@@ -1319,7 +1319,28 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
                 </span>
               )}
             </div>
-            <h4 className={`text-[15px] font-extrabold tracking-tight leading-snug break-words ${allDone ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>{schedule.title}</h4>
+            {/* 제목과 수정/삭제 버튼을 같은 줄에 나란히 배치 */}
+            <div className="flex items-center justify-between mt-1.5 gap-3">
+              <h4 className={`text-[16.5px] font-extrabold tracking-tight leading-snug break-words flex-1 ${allDone ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
+                {schedule.title}
+              </h4>
+              <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <button 
+                  onClick={onEdit} 
+                  className="w-[30px] h-[30px] rounded-xl bg-toss-bg hover:bg-toss-border/40 active:scale-95 flex items-center justify-center text-toss-text-secondary transition-all"
+                  title="일정 수정"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={onDelete} 
+                  className="w-[30px] h-[30px] rounded-xl bg-red-50 hover:bg-red-100 active:scale-95 flex items-center justify-center text-toss-danger transition-all"
+                  title="일정 삭제"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
             {schedule.url && (
               <button
@@ -1332,34 +1353,15 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
               </button>
             )}
 
-            <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                {total > 0 && (
-                  <p className="text-[11.5px] font-semibold text-toss-text-secondary">📍 코스 {done}/{total}개</p>
-                )}
-                {schedule.createdBy && (
-                  <p className="text-[11px] font-bold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
-                    👤 {schedule.createdBy}
-                  </p>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-1.5 ml-auto" onClick={(e) => e.stopPropagation()}>
-                <button 
-                  onClick={onEdit} 
-                  className="w-7 h-7 rounded-xl bg-toss-bg hover:bg-toss-border/40 active:scale-95 flex items-center justify-center text-toss-text-secondary transition-all"
-                  title="일정 수정"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                </button>
-                <button 
-                  onClick={onDelete} 
-                  className="w-7 h-7 rounded-xl bg-red-50 hover:bg-red-100 active:scale-95 flex items-center justify-center text-toss-danger transition-all"
-                  title="일정 삭제"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {total > 0 && (
+                <p className="text-[11.5px] font-semibold text-toss-text-secondary">📍 코스 {done}/{total}개</p>
+              )}
+              {schedule.createdBy && (
+                <p className="text-[11px] font-bold text-toss-text-tertiary bg-toss-bg px-2 py-0.5 rounded-full">
+                  👤 {schedule.createdBy}
+                </p>
+              )}
             </div>
           </div>
 
