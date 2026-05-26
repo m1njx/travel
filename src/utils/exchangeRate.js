@@ -45,66 +45,99 @@ export async function fetchExchangeRates(force = false) {
     // ignore
   }
 
-  // Try API 1: Open.er-api.com
+  // Try API 1: api.manana.kr (Domestic Korean standard rates - highly aligned with Naver)
   try {
-    const res = await fetch(`https://open.er-api.com/v6/latest/EUR?t=${Date.now()}`); // cache busting
+    const res = await fetch(`https://api.manana.kr/exchange/rate/KRW/USD,EUR,GBP,CHF,CZK,HUF.json?t=${Date.now()}`);
     if (!res.ok) throw new Error(`API 1 Status ${res.status}`);
     const data = await res.json();
 
-    if (data.result !== 'success' || !data.rates) {
-      throw new Error('API 1 invalid response');
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('API 1 invalid response format');
     }
 
-    const rates = parseRatesFromData(data.rates);
-    saveRatesToCache(rates, data.time_last_update_utc || new Date().toISOString());
-    return { rates, lastUpdated: lastFetchTime, fromCache: false, source: rateSource };
-  } catch (err1) {
-    console.warn('Primary exchange rate API failed. Trying backup API...', err1);
-    
-    // Try API 2: api.exchangerate-api.com
+    const rates = {};
+    let sampleDate = '';
+
+    data.forEach(item => {
+      const match = item.name.match(/^([A-Z]{3})KRW/);
+      if (match) {
+        const currencyCode = match[1];
+        rates[currencyCode] = parseFloat(item.rate);
+        if (item.date) sampleDate = item.date;
+      }
+    });
+
+    const required = ['EUR', 'GBP', 'CHF', 'CZK', 'USD', 'HUF'];
+    const hasAll = required.every(code => rates[code] !== undefined && !isNaN(rates[code]));
+
+    if (hasAll) {
+      saveRatesToCache(rates, `네이버 실시간 고시 환율 (${sampleDate})`);
+      return { rates, lastUpdated: lastFetchTime, fromCache: false, source: rateSource };
+    } else {
+      throw new Error('API 1 missing some currency rates');
+    }
+  } catch (err0) {
+    console.warn('Primary Korean domestic exchange rate API failed. Falling back to global APIs...', err0);
+
+    // Try API 2: Open.er-api.com
     try {
-      const res = await fetch(`https://api.exchangerate-api.com/v4/latest/EUR?t=${Date.now()}`);
+      const res = await fetch(`https://open.er-api.com/v6/latest/EUR?t=${Date.now()}`); // cache busting
       if (!res.ok) throw new Error(`API 2 Status ${res.status}`);
       const data = await res.json();
-      
-      if (!data.rates) throw new Error('API 2 invalid response');
-      
-      const rates = parseRatesFromData(data.rates);
-      saveRatesToCache(rates, new Date(data.date).toISOString());
-      return { rates, lastUpdated: lastFetchTime, fromCache: false, source: rateSource };
-    } catch (err2) {
-      console.warn('Secondary exchange rate API failed. Trying backup API 3 (Frankfurter)...', err2);
 
-      // Try API 3: Frankfurter.app (highly reliable ECB rates)
+      if (data.result !== 'success' || !data.rates) {
+        throw new Error('API 2 invalid response');
+      }
+
+      const rates = parseRatesFromData(data.rates);
+      saveRatesToCache(rates, data.time_last_update_utc || new Date().toISOString());
+      return { rates, lastUpdated: lastFetchTime, fromCache: false, source: rateSource };
+    } catch (err1) {
+      console.warn('Backup exchange rate API failed. Trying second backup API...', err1);
+      
+      // Try API 3: api.exchangerate-api.com
       try {
-        const res = await fetch(`https://api.frankfurter.app/latest?from=EUR&t=${Date.now()}`);
+        const res = await fetch(`https://api.exchangerate-api.com/v4/latest/EUR?t=${Date.now()}`);
         if (!res.ok) throw new Error(`API 3 Status ${res.status}`);
         const data = await res.json();
-
+        
         if (!data.rates) throw new Error('API 3 invalid response');
         
-        // Frankfurter does not include EUR in rates since base is EUR, add it back as 1.0
-        const rawRates = { ...data.rates, EUR: 1.0 };
-        // Frankfurter base is EUR, but does it have KRW? Yes.
-        const rates = parseRatesFromData(rawRates);
+        const rates = parseRatesFromData(data.rates);
         saveRatesToCache(rates, new Date(data.date).toISOString());
         return { rates, lastUpdated: lastFetchTime, fromCache: false, source: rateSource };
-      } catch (err3) {
-        console.error('All exchange rate APIs failed. Using cached or fallback rates.', err3);
-        
-        // Return memory cached rates if available
-        if (cachedRates) {
-          return { rates: cachedRates, lastUpdated: lastFetchTime, fromCache: true, source: rateSource };
+      } catch (err2) {
+        console.warn('Secondary exchange rate API failed. Trying backup API 4 (Frankfurter)...', err2);
+
+        // Try API 4: Frankfurter.app (highly reliable ECB rates)
+        try {
+          const res = await fetch(`https://api.frankfurter.app/latest?from=EUR&t=${Date.now()}`);
+          if (!res.ok) throw new Error(`API 4 Status ${res.status}`);
+          const data = await res.json();
+
+          if (!data.rates) throw new Error('API 4 invalid response');
+          
+          const rawRates = { ...data.rates, EUR: 1.0 };
+          const rates = parseRatesFromData(rawRates);
+          saveRatesToCache(rates, new Date(data.date).toISOString());
+          return { rates, lastUpdated: lastFetchTime, fromCache: false, source: rateSource };
+        } catch (err3) {
+          console.error('All exchange rate APIs failed. Using cached or fallback rates.', err3);
+          
+          // Return memory cached rates if available
+          if (cachedRates) {
+            return { rates: cachedRates, lastUpdated: lastFetchTime, fromCache: true, source: rateSource };
+          }
+          
+          // Otherwise return static fallback rates with static date
+          return { 
+            rates: FALLBACK_RATES, 
+            lastUpdated: FALLBACK_DATE, 
+            fromCache: false, 
+            isFallback: true, 
+            source: '서버 연결 실패 (기본 고정 환율)' 
+          };
         }
-        
-        // Otherwise return static fallback rates with static date
-        return { 
-          rates: FALLBACK_RATES, 
-          lastUpdated: FALLBACK_DATE, 
-          fromCache: false, 
-          isFallback: true, 
-          source: '서버 연결 실패 (기본 고정 환율)' 
-        };
       }
     }
   }
