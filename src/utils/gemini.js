@@ -352,11 +352,13 @@ Example response format:
         }),
       });
 
-      if (response.status === 404 || response.status === 400 || response.status === 503 || response.status === 429) {
+      // Rate Limit (429) 에러 발생 시 즉시 중단
+      if (response.status === 429) {
+        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+      }
+
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         lastError = new Error(`Model ${model} returned ${response.status}`);
-        if (response.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
         continue;
       }
 
@@ -483,12 +485,14 @@ ratingTier 규칙:
         }),
       });
 
-      if (response.status === 404 || response.status === 400 || response.status === 503 || response.status === 429) {
+      // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
+      if (response.status === 429) {
+        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+      }
+
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         console.warn(`Model ${model} is not available (Status ${response.status}). Trying fallback...`);
         lastError = new Error(`Model ${model} returned ${response.status}`);
-        if (response.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
         continue;
       }
 
