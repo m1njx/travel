@@ -71,13 +71,16 @@ Format:
         }),
       });
 
-      // If the model name is unsupported (usually 404 or 400), try the next model
-      if (response.status === 404 || response.status === 400 || response.status === 503 || response.status === 429) {
+      // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
+      if (response.status === 429) {
+        console.warn(`API Rate Limit Exceeded (429). Stop retrying.`);
+        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+      }
+
+      // 404, 400, 503 등 특정 모델이 지원되지 않거나 과부하일 경우 다음 모델로 폴백
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         console.warn(`Model ${model} is not available (Status ${response.status}). Trying fallback...`);
         lastError = new Error(`Model ${model} returned ${response.status}`);
-        if (response.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
         continue; 
       }
 
@@ -185,12 +188,16 @@ ${places.map((p, i) => `${i + 1}. 이름: "${p.name}", 메모: "${p.memo || '없
         }),
       });
 
-      if (response.status === 404 || response.status === 400 || response.status === 503 || response.status === 429) {
+      // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
+      if (response.status === 429) {
+        console.warn(`API Rate Limit Exceeded (429). Stop retrying.`);
+        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+      }
+
+      // 404, 400, 503 등 특정 모델이 지원되지 않거나 과부하일 경우 다음 모델로 폴백
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         console.warn(`Model ${model} is not available (Status ${response.status}). Trying fallback...`);
         lastError = new Error(`Model ${model} returned ${response.status}`);
-        if (response.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
         continue;
       }
 
@@ -267,11 +274,13 @@ export async function getAITravelTip(schedules, checklists, expenses, apiKey) {
         }),
       });
 
-      if (response.status === 404 || response.status === 400 || response.status === 503 || response.status === 429) {
+      // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
+      if (response.status === 429) {
+        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+      }
+
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
         lastError = new Error(`Model ${model} returned ${response.status}`);
-        if (response.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
         continue;
       }
 
