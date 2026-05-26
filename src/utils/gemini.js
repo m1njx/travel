@@ -329,8 +329,7 @@ Example response format:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ googleSearchRetrieval: {} }], // Enable Search Grounding!
+          contents: [{ parts: [{ text: prompt }] }]
         }),
       });
 
@@ -376,23 +375,23 @@ Example response format:
 }
 
 /**
- * Search Google for live local spots near coordinates using Gemini Search Grounding
+ * Search local spots near address using Gemini knowledge
  */
-export async function getNearbySpotsWithGemini(lat, lng, apiKey) {
+export async function getNearbySpotsWithGemini(address, lat, lng, apiKey) {
   if (!apiKey) {
     throw new Error('API key가 없습니다. 설정 페이지에서 Gemini API key를 등록해주세요.');
   }
 
   const prompt = `
 You are an expert local tour guide.
-The user is currently at GPS coordinates: Latitude ${lat}, Longitude ${lng}.
-Use Google Search to find the absolute best, highly-rated (4.3+ stars) tourist attractions, restaurants, and cafes within a 1km radius of this exact location right now.
+The user is currently at this location: "${address}" (GPS coordinates: Latitude ${lat}, Longitude ${lng}).
+Recommend the absolute best, highly-rated tourist attractions, restaurants, and cafes within a 1km radius of this location.
 
-You must find exactly 4 nearby spots (a nice mix of attractions, restaurants, and cafes).
+You must choose exactly 4 popular real spots (a nice mix of attractions, restaurants, and cafes).
 For each spot, provide:
 1. "name": Name of the spot in Korean.
 2. "category": One of "attraction", "restaurant", "cafe".
-3. "distance": Approximate distance or walking time from the coordinates (e.g. "도보 5분 (300m)").
+3. "distance": Approximate distance or walking time from the user's location (e.g. "도보 5분 (300m)").
 4. "description": A highly useful 1-sentence tip or description in Korean (e.g. "크루아상이 맛있으나 웨이팅 있음", "현지인 최애 파스타 맛집").
 5. "googleMapUrl": The direct Google Maps search URL to find this place (e.g. "https://www.google.com/maps/search/?api=1&query=London+Eye").
 
@@ -422,7 +421,6 @@ Format:
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ googleSearchRetrieval: {} }], // Enable Search Grounding!
           generationConfig: {
             responseMimeType: 'application/json',
           },

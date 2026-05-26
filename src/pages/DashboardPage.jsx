@@ -176,12 +176,32 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
         const { latitude, longitude } = position.coords;
         
         try {
-          // GPS 획득 성공 후 다음 단계로 전환
-          setRadarStage('🔍 1km 이내 찐맛집 및 명소 분석 중...');
+          // GPS 획득 성공 후 주소 역지오코딩 시도
+          setRadarStage('🔍 현재 위치 주소 변환 중...');
+          
+          let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          try {
+            const geoRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ko`
+            );
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              address = geoData.display_name || address;
+              
+              // 도시나 구 등 핵심 지역명이 있으면 진행 상황 텍스트에 노출
+              const localName = geoData.address?.suburb || geoData.address?.city || geoData.address?.borough || '주변';
+              setRadarStage(`🔍 ${localName} 핫스팟 탐색 중...`);
+            } else {
+              setRadarStage('🔍 핫스팟 분석 중...');
+            }
+          } catch (e) {
+            console.warn('Reverse geocoding failed, using coordinates instead:', e);
+            setRadarStage('🔍 핫스팟 분석 중...');
+          }
           
           // 최소 1.5초는 멋진 애니메이션을 경험할 수 있게 대기시간 부여
           const [spots] = await Promise.all([
-            getNearbySpotsWithGemini(latitude, longitude, apiKey),
+            getNearbySpotsWithGemini(address, latitude, longitude, apiKey),
             new Promise((resolve) => setTimeout(resolve, 1800))
           ]);
 
