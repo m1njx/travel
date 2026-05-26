@@ -117,7 +117,7 @@ Format:
         lastError = new Error(`JSON parse error in model ${model}`);
         continue;
       }
-    } catch (error) {
+    } catch (error) { if (error.message && error.message.includes('API 호출 한도')) { throw error; }
       console.warn(`Network/Request error using model ${model}:`, error);
       lastError = error;
       // Continue to try the next model
@@ -226,7 +226,7 @@ ${places.map((p, i) => `${i + 1}. 이름: "${p.name}", 메모: "${p.memo || '없
         lastError = new Error(`JSON parse error in model ${model}`);
         continue;
       }
-    } catch (error) {
+    } catch (error) { if (error.message && error.message.includes('API 호출 한도')) { throw error; }
       console.warn(`Network/Request error using model ${model}:`, error);
       lastError = error;
     }
@@ -296,7 +296,7 @@ export async function getAITravelTip(schedules, checklists, expenses, apiKey) {
       if (textResponse) {
         return textResponse.trim().replace(/^```text\s*/i, '').replace(/```$/, '').trim();
       }
-    } catch (error) {
+    } catch (error) { if (error.message && error.message.includes('API 호출 한도')) { throw error; }
       lastError = error;
     }
   }
@@ -389,7 +389,7 @@ Example response format:
           source: 'Gemini 실시간 검색 환율'
         };
       }
-    } catch (error) {
+    } catch (error) { if (error.message && error.message.includes('API 호출 한도')) { throw error; }
       console.error(`Gemini rate search with ${model} failed:`, error);
       lastError = error;
     }
@@ -563,7 +563,7 @@ ratingTier 규칙:
         lastError = new Error(e.message || `JSON parse error in model ${model}`);
         continue;
       }
-    } catch (error) {
+    } catch (error) { if (error.message && error.message.includes('API 호출 한도')) { throw error; }
       console.warn(`Network/Request error using model ${model}:`, error);
       lastError = error;
     }
