@@ -959,7 +959,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
           </div>
 
           <div className="grid grid-cols-12 gap-2">
-            <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
+            <div className="col-span-12">
               {!editPStartTime ? (
                 <button 
                   type="button" 
@@ -982,7 +982,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
             </div>
 
             {useEditEndTime && (
-              <div className="col-span-6">
+              <div className="col-span-12">
                 {!editPEndTime ? (
                   <button 
                     type="button" 
@@ -1147,7 +1147,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
           </div>
 
           <div className="grid grid-cols-12 gap-2">
-            <div className={useEditEndTime ? "col-span-6" : "col-span-12"}>
+            <div className="col-span-12">
               {!editPStartTime ? (
                 <button 
                   type="button" 
@@ -1170,7 +1170,7 @@ function ScheduleCard({ schedule, index, onEdit, onDelete, onAddPlace, onToggleP
             </div>
 
             {useEditEndTime && (
-              <div className="col-span-6">
+              <div className="col-span-12">
                 {!editPEndTime ? (
                   <button 
                     type="button" 
