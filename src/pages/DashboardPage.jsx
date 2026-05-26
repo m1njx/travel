@@ -5,11 +5,11 @@ import {
   ChevronRight, TrendingUp, AlertCircle, RefreshCw, Compass, ArrowRight,
   Plus, Edit2, Check, X,
   Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
-  Wind, Droplets, MapPin, Coffee, Utensils, Navigation
+  Wind, Droplets
 } from 'lucide-react';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
-import { getAITravelTip, getNearbySpotsWithGemini } from '../utils/gemini';
+import { getAITravelTip } from '../utils/gemini';
 
 const WMO_WEATHER_MAP = {
   0: { label: '맑음', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -149,88 +149,6 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState(null);
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
-
-  // AI Radar States
-  const [isRadarOpen, setIsRadarOpen] = useState(false);
-  const [radarLoading, setRadarLoading] = useState(false);
-  const [radarSpots, setRadarSpots] = useState([]);
-  const [radarError, setRadarError] = useState(null);
-  const [radarStage, setRadarStage] = useState('');
-
-  // Trigger AI Radar scan
-  const handleOpenRadar = () => {
-    setIsRadarOpen(true);
-    setRadarLoading(true);
-    setRadarError(null);
-    setRadarSpots([]);
-    setRadarStage('📡 GPS 실시간 위성 신호 수집 중...');
-
-    if (!navigator.geolocation) {
-      setRadarError('이 브라우저는 위치 정보(GPS)를 지원하지 않습니다.');
-      setRadarLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        try {
-          // GPS 획득 성공 후 주소 역지오코딩 시도
-          setRadarStage('🔍 현재 위치 주소 변환 중...');
-          
-          let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          try {
-            const geoRes = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ko`
-            );
-            if (geoRes.ok) {
-              const geoData = await geoRes.json();
-              address = geoData.display_name || address;
-              
-              // 도시나 구 등 핵심 지역명이 있으면 진행 상황 텍스트에 노출
-              const localName = geoData.address?.suburb || geoData.address?.city || geoData.address?.borough || '주변';
-              setRadarStage(`🔍 ${localName} 핫스팟 탐색 중...`);
-            } else {
-              setRadarStage('🔍 핫스팟 분석 중...');
-            }
-          } catch (e) {
-            console.warn('Reverse geocoding failed, using coordinates instead:', e);
-            setRadarStage('🔍 핫스팟 분석 중...');
-          }
-          
-          // 최소 1.5초는 멋진 애니메이션을 경험할 수 있게 대기시간 부여
-          const [spots] = await Promise.all([
-            getNearbySpotsWithGemini(address, latitude, longitude, apiKey),
-            new Promise((resolve) => setTimeout(resolve, 1800))
-          ]);
-
-          setRadarSpots(spots);
-          setRadarLoading(false);
-        } catch (err) {
-          console.error('Radar scan error:', err);
-          setRadarError(
-            err.message || '주변 탐색에 실패했습니다. Gemini API 설정을 확인해 주세요.'
-          );
-          setRadarLoading(false);
-        }
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        let errorMsg = '위치 권한을 획득하지 못했습니다.';
-        if (error.code === 1) {
-          errorMsg = '위치 정보 공유 권한이 거부되었습니다. 설정에서 허용해 주세요.';
-        } else if (error.code === 2) {
-          errorMsg = '위치 신호를 수집할 수 없습니다 (GPS 수신 불가).';
-        } else if (error.code === 3) {
-          errorMsg = '위치 정보 수신 시간이 초과되었습니다.';
-        }
-        setRadarError(errorMsg);
-        setRadarLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
 
   // Fetch local weather based on geolocation
   useEffect(() => {
@@ -561,31 +479,6 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             <span>실시간 연동 중</span>
           </div>
         </div>
-      </motion.div>
-
-      {/* AI Radar Quick Banner (Desktop) */}
-      <motion.div
-        variants={itemVariants}
-        whileHover={{ scale: 1.01, y: -1 }}
-        whileTap={{ scale: 0.99 }}
-        onClick={handleOpenRadar}
-        className="bg-gradient-to-r from-toss-blue via-indigo-600 to-violet-600 rounded-3xl p-5 text-white flex items-center justify-between shadow-md hover:shadow-lg cursor-pointer relative overflow-hidden transition-all duration-200"
-      >
-        <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-[24px] animate-pulse">
-            📡
-          </div>
-          <div>
-            <h3 className="text-[16px] font-black tracking-tight text-white/95 flex items-center gap-2">
-              내 주변 AI 레이더 켜기
-              <span className="text-[10px] font-bold bg-white/25 text-white px-2 py-0.5 rounded-lg tracking-normal">Beta</span>
-            </h3>
-            <p className="text-[12px] text-white/80 font-medium mt-0.5">내 실시간 GPS 좌표 반경 1km 이내 최고의 맛집, 카페, 관광 명소 실시간 스캔</p>
-          </div>
-        </div>
-        <ChevronRight className="w-6 h-6 text-white/80 shrink-0" />
       </motion.div>
 
       {/* Grid: 3 Core Widgets */}
@@ -982,28 +875,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           </div>
         </div>
 
-        {/* AI Radar Quick Banner */}
-        <motion.div
-          whileTap={{ scale: 0.98 }}
-          onClick={handleOpenRadar}
-          className="mx-5 mt-5 bg-gradient-to-r from-toss-blue to-indigo-600 rounded-3xl p-4.5 text-white flex items-center justify-between shadow-lg shadow-toss-blue/15 cursor-pointer relative overflow-hidden"
-        >
-          <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-          <div className="absolute -left-5 -bottom-5 w-20 h-20 bg-white/10 rounded-full blur-lg pointer-events-none"></div>
-          <div className="flex items-center gap-3.5 relative z-10">
-            <div className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-[22px] animate-pulse">
-              📡
-            </div>
-            <div>
-              <h3 className="text-[14.5px] font-black tracking-tight text-white/95 flex items-center gap-1.5">
-                내 주변 AI 레이더
-                <span className="text-[9px] font-bold bg-white/25 text-white px-1.5 py-0.5 rounded-md tracking-normal">Beta</span>
-              </h3>
-              <p className="text-[11px] text-white/80 font-medium mt-0.5">내 실시간 GPS 1km 이내 맛집/명소 탐색</p>
-            </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-white/80 shrink-0" />
-        </motion.div>
+
 
         {/* Active Schedules Feed */}
         <div className="flex flex-col mt-5">
@@ -1438,156 +1310,7 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
         )}
       </AnimatePresence>
 
-      {/* AI Radar Scanning Modal */}
-      <AnimatePresence>
-        {isRadarOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/55 backdrop-blur-md"
-            onClick={() => setIsRadarOpen(false)}
-          >
-            <motion.div 
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="w-full max-w-md bg-white border border-toss-border/60 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col text-toss-text-primary"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-toss-border/50 pb-4 mb-4 shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-toss-blue-light rounded-xl flex items-center justify-center text-toss-blue border border-toss-blue/10">
-                    <Compass className="w-4.5 h-4.5 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-[17px] font-extrabold tracking-tight">
-                      내 주변 AI 레이더
-                    </h3>
-                    <p className="text-[10.5px] text-toss-text-secondary mt-0.5">
-                      실시간 위치 기반 맛집 & 명소 추천
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsRadarOpen(false)}
-                  className="w-8 h-8 rounded-full bg-toss-bg hover:bg-toss-border/40 flex items-center justify-center text-toss-text-secondary transition-colors btn-icon-sm"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
-              {/* Content Area */}
-              <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-0.5 scrollbar-none">
-                {radarError && (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-[12px] font-medium flex items-start gap-2 border border-red-100">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <div className="flex-1 leading-relaxed">
-                      <p className="font-bold">탐색 오류</p>
-                      <p className="text-[11px] opacity-80 mt-1">{radarError}</p>
-                    </div>
-                  </div>
-                )}
-
-                {radarLoading ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-6 text-center">
-                    {/* Radar Pulse Scanning Ring */}
-                    <div className="relative w-28 h-28 flex items-center justify-center bg-toss-blue-light/50 rounded-full border border-toss-blue/10">
-                      <div className="absolute inset-2 bg-toss-blue-light rounded-full flex items-center justify-center">
-                        <Compass className="w-8 h-8 text-toss-blue animate-spin" style={{ animationDuration: '4s' }} />
-                      </div>
-                      <div className="absolute inset-0 rounded-full border-2 border-toss-blue/20 animate-ping" />
-                      <div className="absolute inset-4 rounded-full border border-toss-blue/10 animate-pulse" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[14px] font-bold text-toss-text-primary animate-pulse">{radarStage}</p>
-                      <p className="text-[10.5px] text-toss-text-tertiary">GPS 위성을 통해 주위 1km 안을 스캔 중입니다.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {!radarError && radarSpots.length > 0 && (
-                      <div className="space-y-3">
-                        {radarSpots.map((spot, index) => {
-                          // Category Icons
-                          let categoryEmoji = '📍';
-                          let categoryBg = 'bg-blue-50 text-blue-600';
-                          if (spot.category === 'restaurant') {
-                            categoryEmoji = '🍽️';
-                            categoryBg = 'bg-amber-50 text-amber-600';
-                          } else if (spot.category === 'cafe') {
-                            categoryEmoji = '☕';
-                            categoryBg = 'bg-emerald-50 text-emerald-600';
-                          }
-
-                          return (
-                            <motion.div 
-                              key={index}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              className="p-4 bg-toss-bg/40 border border-toss-border/30 rounded-2xl flex flex-col gap-2.5 hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-[15px] font-semibold shrink-0 ${categoryBg}`}>
-                                    {categoryEmoji}
-                                  </span>
-                                  <div className="min-w-0">
-                                    <h4 className="text-[14px] font-extrabold text-toss-text-primary truncate">{spot.name}</h4>
-                                    <p className="text-[10.5px] text-toss-text-tertiary font-bold mt-0.5 flex items-center gap-1">
-                                      <MapPin className="w-3 h-3 text-toss-text-tertiary" /> {spot.distance}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <a 
-                                  href={spot.googleMapUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-1.5 bg-white border border-toss-border hover:bg-toss-bg rounded-xl text-[11px] font-bold text-toss-text-secondary flex items-center gap-1 shrink-0 transition-colors active:scale-95"
-                                >
-                                  <Navigation className="w-3 h-3 text-toss-blue" />
-                                  길찾기
-                                </a>
-                              </div>
-                              <p className="text-[12px] text-toss-text-secondary leading-relaxed bg-white border border-toss-border/20 p-2.5 rounded-xl font-bold">
-                                💡 {spot.description}
-                              </p>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    {!radarError && radarSpots.length === 0 && (
-                      <div className="flex flex-col items-center py-10 text-center gap-2">
-                        <div className="w-12 h-12 bg-toss-bg rounded-full flex items-center justify-center text-[24px]">🤷‍♂️</div>
-                        <p className="text-[14px] font-bold text-toss-text-primary">추천할 장소를 찾지 못했습니다</p>
-                        <p className="text-[11px] text-toss-text-tertiary">GPS 좌표 수집이 정상적인지 확인해 주세요.</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Action Footer */}
-              <div className="border-t border-toss-border/40 pt-4 mt-4 shrink-0 flex items-center gap-2">
-                <button
-                  onClick={handleOpenRadar}
-                  disabled={radarLoading}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-3.5 bg-toss-blue text-white rounded-2xl text-[13px] font-bold shadow-md hover:bg-toss-blue/90 disabled:opacity-50 transition-all active:scale-[0.98]"
-                >
-                  <RefreshCw className={`w-4 h-4 ${radarLoading ? 'animate-spin' : ''}`} />
-                  다시 스캔하기
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
