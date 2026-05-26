@@ -17,8 +17,7 @@ import { useSyncedList, useSyncedMeta, useActivityLog, useSyncedLogs, useOnlineS
 const TABS = [
   { id: 'dashboard', label: '홈', icon: LayoutDashboard },
   { id: 'planner', label: '일정', icon: Calendar },
-  { id: 'expense', label: '가계부', icon: Wallet },
-  { id: 'settle', label: '정산', icon: Users },
+  { id: 'expense', label: '가계부/정산', icon: Wallet },
   { id: 'checklist', label: '준비물', icon: Backpack },
   { id: 'memo', label: '메모', icon: Pin },
   { id: 'settings', label: '설정', icon: Settings },
@@ -284,8 +283,7 @@ export default function App() {
     ? [
         { id: 'dashboard', label: '홈', icon: LayoutDashboard },
         { id: 'planner', label: '일정', icon: Calendar },
-        { id: 'expense', label: '가계부', icon: Wallet },
-        { id: 'settle', label: '정산', icon: Users },
+        { id: 'expense', label: '가계부/정산', icon: Wallet },
         { id: 'checklist', label: '준비물', icon: Backpack },
         { id: 'memo', label: '메모', icon: Pin },
         { id: 'logs', label: '로그', icon: Shield },
@@ -469,9 +467,7 @@ export default function App() {
                   logAction={logAction}
                 />
               )}
-              {activeTab === 'settle' && (
-                <SettlePage members={memberNames} expenses={expensesSync.items} nickname={nickname} />
-              )}
+
               {activeTab === 'checklist' && (
                 <ChecklistPage
                   checklistsSync={checklistsSync}
@@ -512,9 +508,8 @@ export default function App() {
         </main>
       </div>
 
-      {/* Mobile Bottom Tab Bar (hidden on desktop) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-toss-border safe-bottom z-50">
-        <div className="flex overflow-x-auto scrollbar-none">
+        <div className="flex w-full justify-around items-center overflow-x-auto scrollbar-none px-2">
           {activeTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -523,11 +518,11 @@ export default function App() {
                 key={tab.id}
                 whileTap={{ scale: 0.92 }}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center py-3 relative ${activeTabs.length > 6 ? 'min-w-[60px] px-2' : 'flex-1'}`}
+                className={`flex flex-col items-center py-2.5 relative flex-1 min-w-[52px] max-w-[75px] transition-colors duration-200`}
               >
                 <div className="relative">
                   <Icon
-                    className={`w-6 h-6 transition-colors duration-200 ${
+                    className={`w-5.5 h-5.5 transition-colors duration-200 ${
                       isActive ? 'text-toss-blue' : 'text-toss-text-tertiary'
                     }`}
                     strokeWidth={isActive ? 2.2 : 1.8}
@@ -540,7 +535,7 @@ export default function App() {
                   )}
                 </div>
                 <span
-                  className={`text-[10px] mt-1 font-medium transition-colors duration-200 whitespace-nowrap ${
+                  className={`text-[9.5px] mt-1 font-medium transition-colors duration-200 whitespace-nowrap ${
                     isActive ? 'text-toss-blue' : 'text-toss-text-tertiary'
                   }`}
                 >

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Wallet, TrendingUp, RefreshCw, Clock, ArrowRightLeft, Camera, Sparkles, Loader2, Image as ImageIcon, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { fetchExchangeRates, convertToKRW, formatKRW, getCurrencySymbol, formatRateTime, CURRENCIES } from '../utils/exchangeRate';
 import { scanReceiptWithGemini, getLiveRatesWithGemini } from '../utils/gemini';
+import SettlePage from './SettlePage';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -390,43 +391,7 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
 
         {/* SETTLEMENT TAB CONTENT */}
         {activeTab === 'settlement' && (
-          <div className="px-4 sm:px-5 py-6">
-            <h2 className="text-[20px] font-bold text-toss-text-primary mb-4">정산 현황</h2>
-            {remainingSettlement.length > 0 ? (
-              <div className="space-y-3">
-                {remainingSettlement.map((s, idx) => (
-                  <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                    className="bg-white border border-toss-border/55 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-[20px]">💸</div>
-                        <div className="flex-1">
-                          <p className="text-[14px] font-bold text-toss-text-primary">{s.from}</p>
-                          <p className="text-[12px] text-toss-text-secondary">에서 {s.to}에게</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[16px] font-extrabold text-toss-text-primary">₩{formatKRW(s.amount)}</p>
-                        <p className="text-[10px] text-toss-text-tertiary">전달 필요</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleSettlementComplete(s.from, s.to, s.amount)}
-                      className="w-full mt-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                    >
-                      <CheckCircle2 className="w-4 h-4" /> 정산 완료
-                    </button>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center py-16 bg-white rounded-2xl border border-toss-border/60">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-[32px]">✅</div>
-                <p className="text-[16px] font-semibold text-toss-text-primary">모든 정산이 완료되었어요!</p>
-                <p className="text-[14px] text-toss-text-secondary mt-1">깔끔하게 정산되었습니다 🎉</p>
-              </div>
-            )}
-          </div>
+          <SettlePage members={members} expenses={expenses} nickname={nickname} />
         )}
       </div>
 
@@ -569,40 +534,7 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
 
         {/* MOBILE SETTLEMENT TAB */}
         {activeTab === 'settlement' && (
-          <div className="mx-5 mt-6">
-            <h2 className="text-[17px] font-bold text-toss-text-primary mb-4">정산 현황</h2>
-            {remainingSettlement.length > 0 ? (
-              <div className="space-y-3">
-                {remainingSettlement.map((s, idx) => (
-                  <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                    className="bg-white border border-toss-border/55 rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-[24px]">💸</div>
-                      <div className="flex-1">
-                        <p className="text-[13px] font-bold text-toss-text-primary">{s.from}</p>
-                        <p className="text-[11px] text-toss-text-secondary">→ {s.to}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[15px] font-extrabold text-toss-text-primary">₩{formatKRW(s.amount)}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleSettlementComplete(s.from, s.to, s.amount)}
-                      className="w-full py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-[12px] flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                    >
-                      <CheckCircle2 className="w-4 h-4" /> 정산 완료
-                    </button>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center py-12 bg-white rounded-2xl border border-toss-border/50 text-center">
-                <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mb-3 text-[28px]">✅</div>
-                <p className="text-[14px] font-bold text-toss-text-primary">모든 정산 완료!</p>
-                <p className="text-[11px] text-toss-text-secondary mt-1">깔끔하게 정산되었습니다</p>
-              </div>
-            )}
-          </div>
+          <SettlePage members={members} expenses={expenses} nickname={nickname} />
         )}
       </div>
 
