@@ -10,7 +10,6 @@ import {
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
 import { getAITravelTip } from '../utils/gemini';
-import NearbyRestaurants from '../components/NearbyRestaurants';
 
 const WMO_WEATHER_MAP = {
   0: { label: '맑음', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -629,11 +628,6 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
         </motion.div>
       </div>
 
-      {/* Nearby Restaurants Section - Desktop (Full width between grids) */}
-      <motion.div variants={itemVariants} className="w-full">
-        <NearbyRestaurants apiKey={apiKey} />
-      </motion.div>
-
       {/* Grid: Timeline and AI Recommendations */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
         {/* Left Side (8/12 col): Timeline Course */}
@@ -879,11 +873,6 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
               <span className="text-[12px] font-extrabold tracking-tight pt-1 leading-none truncate max-w-full px-0.5">가이드</span>
             </div>
           </div>
-        </div>
-
-        {/* Nearby Restaurants Section - Mobile */}
-        <div className="px-5 mt-4">
-          <NearbyRestaurants apiKey={apiKey} />
         </div>
 
         {/* Active Schedules Feed */}
