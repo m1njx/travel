@@ -74,7 +74,7 @@ Format:
       // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
       if (response.status === 429) {
         console.warn(`API Rate Limit Exceeded (429). Stop retrying.`);
-        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+        throw new Error('API 한도 초과(1분당 15회 또는 일일 제공량 1,500회 소진). 1분 뒤에도 안되면 내일 시도하거나 새 키를 발급받으세요.');
       }
 
       // 404, 400, 503 등 특정 모델이 지원되지 않거나 과부하일 경우 다음 모델로 폴백
@@ -191,7 +191,7 @@ ${places.map((p, i) => `${i + 1}. 이름: "${p.name}", 메모: "${p.memo || '없
       // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
       if (response.status === 429) {
         console.warn(`API Rate Limit Exceeded (429). Stop retrying.`);
-        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+        throw new Error('API 한도 초과(1분당 15회 또는 일일 제공량 1,500회 소진). 1분 뒤에도 안되면 내일 시도하거나 새 키를 발급받으세요.');
       }
 
       // 404, 400, 503 등 특정 모델이 지원되지 않거나 과부하일 경우 다음 모델로 폴백
@@ -276,7 +276,7 @@ export async function getAITravelTip(schedules, checklists, expenses, apiKey) {
 
       // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
       if (response.status === 429) {
-        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+        throw new Error('API 한도 초과(1분당 15회 또는 일일 제공량 1,500회 소진). 1분 뒤에도 안되면 내일 시도하거나 새 키를 발급받으세요.');
       }
 
       if (response.status === 404 || response.status === 400 || response.status === 503) {
@@ -354,7 +354,7 @@ Example response format:
 
       // Rate Limit (429) 에러 발생 시 즉시 중단
       if (response.status === 429) {
-        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+        throw new Error('API 한도 초과(1분당 15회 또는 일일 제공량 1,500회 소진). 1분 뒤에도 안되면 내일 시도하거나 새 키를 발급받으세요.');
       }
 
       if (response.status === 404 || response.status === 400 || response.status === 503) {
@@ -497,7 +497,7 @@ ratingTier 규칙:
 
       // Rate Limit (429) 에러 발생 시 전체 키가 막힌 것이므로 다른 모델 시도 없이 즉시 중단
       if (response.status === 429) {
-        throw new Error('API 호출 한도(1분당 15회)를 초과했습니다. 약 1분 후에 다시 시도해주세요.');
+        throw new Error('API 한도 초과(1분당 15회 또는 일일 제공량 1,500회 소진). 1분 뒤에도 안되면 내일 시도하거나 새 키를 발급받으세요.');
       }
 
       if (response.status === 404 || response.status === 400 || response.status === 503) {
