@@ -154,9 +154,9 @@ ${places.map((p, i) => `${i + 1}. 이름: "${p.name}", 메모: "${p.memo || '없
 응답은 반드시 마크다운 코드 블록 등이 없는 순수 JSON 형태여야 하며, 다음 포맷의 배열이어야 합니다:
 [
   {
-    "id": "기존 장소의 id (새로 추천하는 장소라면 빈 문자열 \"\")",
+    "id": "기존 장소의 id (새로 추천하는 장소라면 빈 문자열 '')",
     "name": "장소 이름",
-    "time": "시작시간 ~ 종료시간 (예: \"09:00 ~ 11:00\")",
+    "time": "시작시간 ~ 종료시간 (예: '09:00 ~ 11:00')",
     "memo": "이 장소에 대한 팁 또는 기존 메모 내용",
     "url": "기존 장소의 url 또는 새 장소의 경우 비워둠"
   }
@@ -395,4 +395,88 @@ Example response format:
     }
   }
 
-  throw lastError || new Error('Gemini API 실시간 환율 검색에 실패했습니다.');}
+  throw lastError || new Error('Gemini API 실시간 환율 검색에 실패했습니다.');
+}
+
+/**
+ * Generate AI travel packing recommendations based on destination and weather/season.
+ * Returns parsed JSON list of items: [{ name: "item name", category: "essential|clothing|medicine|etc", reason: "reason to pack" }]
+ */
+export async function getAIPackingRecommendations(destination, weather, apiKey) {
+  if (!apiKey) {
+    throw new Error('API key가 없습니다. 설정 페이지에서 Gemini API key를 등록해주세요.');
+  }
+
+  const prompt = `
+당신은 최고의 여행 비서이자 패킹 가이드 전문가입니다.
+여행지와 날씨/시기 정보를 기반으로 반드시 가져가야 할 유용하고 센스있는 준비물 목록을 분석해 주세요.
+
+여행지: "${destination}"
+날씨/시기: "${weather}"
+
+[요구사항]
+1. 여행지의 고유 특성(예: 수질, 치안, 전압, 관광 종류)과 날씨/계절에 맞춘 세부 품목을 최소 5개에서 최대 8개까지 생성해 주세요.
+2. 각 품목은 한국어로 명확하고 간결해야 합니다. (예: "샤워기 필터", "멀티 플러그", "우산", "상비 소화제")
+3. 각 품목의 카테고리는 다음 중 하나로 배정해 주세요: "essential", "clothing", "medicine", "etc".
+4. 왜 가져가야 하는지 한국어로 아주 짤막한 1문장의 사유("reason")를 적어주세요.
+
+응답은 반드시 마크다운 코드 블록 등이 없는 순수 JSON 형태여야 하며, 다음 포맷의 배열이어야 합니다:
+[
+  {
+    "name": "품목 이름",
+    "category": "essential 또는 clothing 또는 medicine 또는 etc",
+    "reason": "해당 품목을 추천하는 사유"
+  }
+]
+`;
+
+  let lastError = null;
+
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const model = GEMINI_MODELS[i];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      if (response.status === 429) {
+        throw new Error('API 한도 초과(1분당 15회 또는 일일 제공량 1,500회 소진). 1분 뒤에도 안되면 내일 시도하거나 새 키를 발급받으세요.');
+      }
+
+      if (response.status === 404 || response.status === 400 || response.status === 503) {
+        lastError = new Error(`Model ${model} returned ${response.status}`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errText = await response.text();
+        lastError = new Error(`HTTP Error ${response.status}: ${errText}`);
+        continue;
+      }
+
+      const result = await response.json();
+      const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (textResponse) {
+        const cleanedText = textResponse.trim().replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        const parsed = JSON.parse(cleanedText);
+        return parsed;
+      }
+    } catch (error) {
+      if (error.message && error.message.includes('API 호출 한도')) { throw error; }
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('All Gemini models failed to generate packing recommendations.');
+}
