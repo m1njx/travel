@@ -10,6 +10,12 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
   const [checklistTab, setChecklistTab] = useState('personal');
   const [newPackName, setNewPackName] = useState('');
   const [packAssignee, setPackAssignee] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'completed'
+
+  const handleTabChange = (tab) => {
+    setChecklistTab(tab);
+    setStatusFilter('all');
+  };
 
   const handleAddPack = async () => {
     if (!newPackName.trim()) return;
@@ -49,6 +55,11 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
       }
       return item.type === 'common';
     })
+    .filter(item => {
+      if (statusFilter === 'active') return !item.completed;
+      if (statusFilter === 'completed') return item.completed;
+      return true;
+    })
     .sort((a, b) => b.createdAt - a.createdAt);
 
   const totalPersonal = checklists.filter(i => i.type === 'personal' && i.assignedTo === nickname).length;
@@ -58,6 +69,10 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
   const totalAll = totalPersonal + totalCommon;
   const doneAll = donePersonal + doneCommon;
   const progressRate = totalAll > 0 ? Math.round((doneAll / totalAll) * 100) : 0;
+
+  const activeTabTotal = checklistTab === 'personal' ? totalPersonal : totalCommon;
+  const activeTabDone = checklistTab === 'personal' ? donePersonal : doneCommon;
+  const activeTabActive = activeTabTotal - activeTabDone;
 
   return (
     <>
@@ -97,7 +112,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
           className="mx-4 sm:mx-5 mb-5">
           <div className="flex bg-toss-bg p-1 rounded-xl">
             <button
-              onClick={() => setChecklistTab('personal')}
+              onClick={() => handleTabChange('personal')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-bold rounded-lg transition-all ${
                 checklistTab === 'personal' ? 'bg-white text-toss-blue shadow-sm' : 'text-toss-text-secondary'
               }`}
@@ -111,7 +126,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
               )}
             </button>
             <button
-              onClick={() => setChecklistTab('common')}
+              onClick={() => handleTabChange('common')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-bold rounded-lg transition-all ${
                 checklistTab === 'common' ? 'bg-white text-toss-blue shadow-sm' : 'text-toss-text-secondary'
               }`}
@@ -130,6 +145,40 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
         {/* Items List */}
         <div className="px-4 sm:px-5">
           <div className="bg-white rounded-2xl border border-toss-border p-4 sm:p-5 shadow-sm">
+            {/* Status Filter Tabs (Desktop) */}
+            <div className="flex gap-1.5 mb-4 bg-toss-bg p-1 rounded-xl w-fit">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${
+                  statusFilter === 'all'
+                    ? 'bg-white text-toss-blue shadow-sm'
+                    : 'text-toss-text-secondary hover:text-toss-text-primary'
+                }`}
+              >
+                전체 ({activeTabTotal})
+              </button>
+              <button
+                onClick={() => setStatusFilter('active')}
+                className={`px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${
+                  statusFilter === 'active'
+                    ? 'bg-white text-toss-blue shadow-sm'
+                    : 'text-toss-text-secondary hover:text-toss-text-primary'
+                }`}
+              >
+                챙겨야 할 것 ({activeTabActive})
+              </button>
+              <button
+                onClick={() => setStatusFilter('completed')}
+                className={`px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${
+                  statusFilter === 'completed'
+                    ? 'bg-white text-toss-blue shadow-sm'
+                    : 'text-toss-text-secondary hover:text-toss-text-primary'
+                }`}
+              >
+                챙긴 것 ({activeTabDone})
+              </button>
+            </div>
+
             {/* Item List */}
             <div className="space-y-2 mb-4 max-h-[400px] overflow-y-auto pr-1">
               <AnimatePresence mode="popLayout">
@@ -195,10 +244,22 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
                     <Backpack className="w-7 h-7 text-toss-blue" />
                   </div>
                   <p className="text-[15px] font-semibold text-toss-text-primary mb-1">
-                    {checklistTab === 'personal' ? '내 준비물이 비어있어요' : '공동 준비물이 비어있어요'}
+                    {activeTabTotal === 0 ? (
+                      checklistTab === 'personal' ? '내 준비물이 비어있어요' : '공동 준비물이 비어있어요'
+                    ) : statusFilter === 'active' ? (
+                      '챙겨야 할 준비물이 없어요!'
+                    ) : (
+                      '아직 챙긴 준비물이 없어요'
+                    )}
                   </p>
                   <p className="text-[13px] text-toss-text-secondary">
-                    {checklistTab === 'personal' ? '개인적으로 챙길 물건을 등록해 보세요' : '팀원 모두가 챙겨야 할 물건을 등록해 보세요'}
+                    {activeTabTotal === 0 ? (
+                      checklistTab === 'personal' ? '개인적으로 챙길 물건을 등록해 보세요' : '팀원 모두가 챙겨야 할 물건을 등록해 보세요'
+                    ) : statusFilter === 'active' ? (
+                      '모든 준비물을 다 챙기셨네요 ✨'
+                    ) : (
+                      '챙긴 물품의 체크박스를 눌러 완료 처리해 보세요 🎒'
+                    )}
                   </p>
                 </div>
               )}
@@ -298,7 +359,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
         <div className="mx-4 mt-5 mb-4">
           <div className="flex bg-slate-200/60 p-1 rounded-2xl relative">
             <button
-              onClick={() => setChecklistTab('personal')}
+              onClick={() => handleTabChange('personal')}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-3 text-[13px] font-black rounded-xl transition-all duration-300 ${
                 checklistTab === 'personal' ? 'text-[#2563eb] font-black' : 'text-slate-500 font-bold'
               }`}
@@ -312,7 +373,7 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
               )}
             </button>
             <button
-              onClick={() => setChecklistTab('common')}
+              onClick={() => handleTabChange('common')}
               className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-3 text-[13px] font-black rounded-xl transition-all duration-300 ${
                 checklistTab === 'common' ? 'text-[#2563eb] font-black' : 'text-slate-500 font-bold'
               }`}
@@ -337,6 +398,40 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
               transition={{ type: 'spring', stiffness: 350, damping: 28 }}
             />
           </div>
+        </div>
+
+        {/* Status Filter (Sub-tab Mobile) */}
+        <div className="mx-4 mb-4 flex bg-slate-200/40 p-0.5 rounded-xl">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`flex-1 py-2 text-[11px] font-black rounded-lg transition-all ${
+              statusFilter === 'all'
+                ? 'bg-white text-[#2563eb] shadow-sm font-black'
+                : 'text-slate-500 font-bold'
+            }`}
+          >
+            전체 ({activeTabTotal})
+          </button>
+          <button
+            onClick={() => setStatusFilter('active')}
+            className={`flex-1 py-2 text-[11px] font-black rounded-lg transition-all ${
+              statusFilter === 'active'
+                ? 'bg-white text-[#2563eb] shadow-sm font-black'
+                : 'text-slate-500 font-bold'
+            }`}
+          >
+            챙겨야 할 것 ({activeTabActive})
+          </button>
+          <button
+            onClick={() => setStatusFilter('completed')}
+            className={`flex-1 py-2 text-[11px] font-black rounded-lg transition-all ${
+              statusFilter === 'completed'
+                ? 'bg-white text-[#2563eb] shadow-sm font-black'
+                : 'text-slate-500 font-bold'
+            }`}
+          >
+            챙긴 것 ({activeTabDone})
+          </button>
         </div>
 
         {/* Dynamic Checklist Content */}
@@ -450,10 +545,22 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
                   <Backpack className="w-7 h-7 text-[#2563eb]" />
                 </div>
                 <p className="text-[15px] font-extrabold text-slate-800 mb-1">
-                  {checklistTab === 'personal' ? '내 준비물이 비어있어요' : '공동 준비물이 비어있어요'}
+                  {activeTabTotal === 0 ? (
+                    checklistTab === 'personal' ? '내 준비물이 비어있어요' : '공동 준비물이 비어있어요'
+                  ) : statusFilter === 'active' ? (
+                    '챙겨야 할 준비물이 없어요!'
+                  ) : (
+                    '아직 챙긴 준비물이 없어요'
+                  )}
                 </p>
                 <p className="text-[12px] text-slate-400">
-                  {checklistTab === 'personal' ? '개인적으로 챙길 물품을 등록해 보세요.' : '팀원들과 같이 챙길 공통 물품을 등록해 보세요.'}
+                  {activeTabTotal === 0 ? (
+                    checklistTab === 'personal' ? '개인적으로 챙길 물품을 등록해 보세요.' : '팀원들과 같이 챙길 공통 물품을 등록해 보세요.'
+                  ) : statusFilter === 'active' ? (
+                    '모든 준비물을 다 챙기셨네요 ✨'
+                  ) : (
+                    '챙긴 물품의 체크박스를 눌러 완료 처리해 보세요 🎒'
+                  )}
                 </p>
               </div>
             )}
