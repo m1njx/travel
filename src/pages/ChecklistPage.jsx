@@ -4,6 +4,50 @@ import { Plus, Trash2, CheckSquare, Square, Backpack, Package, User } from 'luci
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+function getLevenshteinDistance(a, b) {
+  const tmp = [];
+  let i, j;
+  for (i = 0; i <= a.length; i++) {
+    tmp[i] = [i];
+  }
+  for (j = 0; j <= b.length; j++) {
+    tmp[0][j] = j;
+  }
+  for (i = 1; i <= a.length; i++) {
+    for (j = 1; j <= b.length; j++) {
+      tmp[i][j] = Math.min(
+        tmp[i - 1][j] + 1,
+        tmp[i][j - 1] + 1,
+        tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return tmp[a.length][b.length];
+}
+
+function checkSimilarity(a, b) {
+  const cleanA = a.trim().toLowerCase();
+  const cleanB = b.trim().toLowerCase();
+  
+  if (cleanA === cleanB) return 'exact';
+  
+  const minLen = Math.min(cleanA.length, cleanB.length);
+  if (minLen >= 2 && (cleanA.includes(cleanB) || cleanB.includes(cleanA))) {
+    return 'similar';
+  }
+  
+  const distance = getLevenshteinDistance(cleanA, cleanB);
+  const maxLen = Math.max(cleanA.length, cleanB.length);
+  if (maxLen >= 4 && distance <= 2) {
+    return 'similar';
+  }
+  if (maxLen < 4 && distance === 1) {
+    return 'similar';
+  }
+  
+  return 'none';
+}
+
 export default function ChecklistPage({ checklistsSync, members, nickname, logAction }) {
   const { items: checklists = [], addItem, updateItem, removeItem } = checklistsSync || { items: [], addItem: () => {}, updateItem: () => {}, removeItem: () => {} };
 
@@ -21,16 +65,34 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
     const trimmedName = newPackName.trim();
     if (!trimmedName) return;
 
-    // 중복 검사
-    const isDuplicate = checklists.some(item => {
-      if (item.type !== checklistTab) return false;
-      if (checklistTab === 'personal' && item.assignedTo !== nickname) return false;
-      return item.name.trim().toLowerCase() === trimmedName.toLowerCase();
-    });
+    let exactMatch = null;
+    let similarMatch = null;
 
-    if (isDuplicate) {
+    for (const item of checklists) {
+      if (item.type !== checklistTab) continue;
+      if (checklistTab === 'personal' && item.assignedTo !== nickname) continue;
+
+      const similarity = checkSimilarity(item.name, trimmedName);
+      if (similarity === 'exact') {
+        exactMatch = item;
+        break; // Exact match has highest priority
+      } else if (similarity === 'similar' && !similarMatch) {
+        similarMatch = item;
+      }
+    }
+
+    if (exactMatch) {
       alert('이미 있는 품목입니다');
       return;
+    }
+
+    if (similarMatch) {
+      const confirmRegister = window.confirm(
+        `'${similarMatch.name}' 품목이 이미 등록되어 있습니다.\n이미 비슷한 품목이 있습니다. 그래도 등록하시겠습니까?`
+      );
+      if (!confirmRegister) {
+        return;
+      }
     }
 
     const newItem = {
