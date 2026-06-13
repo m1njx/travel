@@ -292,6 +292,39 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
     };
   }, []);
 
+  const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // 날씨 스마트 준비물 알림 조건 분석
+  const rainCodes = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99];
+  const isRainForecast = weather && !weatherLoading && (weather.rainProb > 50 || rainCodes.includes(weather.code));
+  const hasUmbrella = checklists.some(item => {
+    const name = item.name.trim();
+    return name.includes('우산') || name.includes('우비');
+  });
+  const showRainWarning = isRainForecast && !hasUmbrella;
+
+  const isColdForecast = weather && !weatherLoading && weather.temp < 10;
+  const hasWarmClothing = checklists.some(item => {
+    const name = item.name.trim();
+    return name.includes('겉옷') || name.includes('패딩') || name.includes('자켓') || name.includes('코트') || name.includes('외투') || name.includes('점퍼');
+  });
+  const showColdWarning = isColdForecast && !hasWarmClothing;
+
+  const handleQuickAddPack = async (name) => {
+    if (!checklistsSync) return;
+    const newItem = {
+      id: genId(),
+      name: name,
+      type: 'personal',
+      completed: false,
+      assignedTo: nickname,
+      createdBy: nickname,
+      createdAt: Date.now(),
+    };
+    await checklistsSync.addItem(newItem);
+    alert(`준비물에 '${name}'이(가) 추가되었습니다! 🎒`);
+  };
+
   // Budget calculations
   const totalSpentKRW = expenses.reduce((a, e) => {
     const r = e.rateSnapshot || rates;
@@ -481,6 +514,46 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           </div>
         </div>
       </motion.div>
+
+      {/* 날씨 스마트 알림 배너 */}
+      {(showRainWarning || showColdWarning) && (
+        <motion.div variants={itemVariants} className="space-y-3">
+          {showRainWarning && (
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-3xl flex items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="text-[22px]">☔</span>
+                <div>
+                  <h4 className="text-[14px] font-bold text-slate-800">비 예보가 있습니다!</h4>
+                  <p className="text-[12px] text-slate-500 mt-0.5">준비물 목록에 '우산' 또는 '우비'가 없습니다. 미리 챙겨보세요.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleQuickAddPack('우산')}
+                className="px-4 py-2 bg-toss-blue text-white rounded-xl text-[12px] font-bold shadow-sm hover:bg-blue-600 transition-colors shrink-0"
+              >
+                우산 추가하기
+              </button>
+            </div>
+          )}
+          {showColdWarning && (
+            <div className="p-4 bg-amber-50 border border-amber-100 rounded-3xl flex items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="text-[22px]">🧥</span>
+                <div>
+                  <h4 className="text-[14px] font-bold text-slate-800">현지 날씨가 춥습니다!</h4>
+                  <p className="text-[12px] text-slate-500 mt-0.5">현재 기온이 10°C 이하입니다. 준비물에 '따뜻한 겉옷'을 추가해 보세요.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleQuickAddPack('따뜻한 겉옷')}
+                className="px-4 py-2 bg-orange-500 text-white rounded-xl text-[12px] font-bold shadow-sm hover:bg-orange-600 transition-colors shrink-0"
+              >
+                겉옷 추가하기
+              </button>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Grid: 3 Core Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -880,6 +953,46 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             </div>
           </div>
         </div>
+
+        {/* 모바일 날씨 스마트 알림 배너 */}
+        {(showRainWarning || showColdWarning) && (
+          <div className="mx-4 mt-4 space-y-3">
+            {showRainWarning && (
+              <div className="p-4 bg-blue-50 border border-blue-100/60 rounded-3xl flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[20px] shrink-0">☔</span>
+                  <div className="min-w-0">
+                    <h4 className="text-[13px] font-black text-slate-800 truncate">비 예보가 있습니다!</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">준비물에 '우산'을 추가해 보세요.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleQuickAddPack('우산')}
+                  className="px-3.5 py-2 bg-[#2563eb] text-white rounded-2xl text-[11.5px] font-extrabold shadow-sm shrink-0"
+                >
+                  추가
+                </button>
+              </div>
+            )}
+            {showColdWarning && (
+              <div className="p-4 bg-amber-50 border border-amber-100/60 rounded-3xl flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[20px] shrink-0">🧥</span>
+                  <div className="min-w-0">
+                    <h4 className="text-[13px] font-black text-slate-800 truncate">현지 날씨가 춥습니다!</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">'따뜻한 겉옷'을 추가해 보세요.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleQuickAddPack('따뜻한 겉옷')}
+                  className="px-3.5 py-2 bg-orange-500 text-white rounded-2xl text-[11.5px] font-extrabold shadow-sm shrink-0"
+                >
+                  추가
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Active Schedules Feed */}
         <div className="flex flex-col mt-5">
