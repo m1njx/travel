@@ -18,10 +18,24 @@ export default function ChecklistPage({ checklistsSync, members, nickname, logAc
   };
 
   const handleAddPack = async () => {
-    if (!newPackName.trim()) return;
+    const trimmedName = newPackName.trim();
+    if (!trimmedName) return;
+
+    // 중복 검사
+    const isDuplicate = checklists.some(item => {
+      if (item.type !== checklistTab) return false;
+      if (checklistTab === 'personal' && item.assignedTo !== nickname) return false;
+      return item.name.trim().toLowerCase() === trimmedName.toLowerCase();
+    });
+
+    if (isDuplicate) {
+      alert('이미 있는 품목입니다');
+      return;
+    }
+
     const newItem = {
       id: genId(),
-      name: newPackName.trim(),
+      name: trimmedName,
       type: checklistTab,
       completed: false,
       assignedTo: checklistTab === 'common' ? (packAssignee || '공통') : nickname,
