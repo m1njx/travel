@@ -122,7 +122,7 @@ export default function CityExpenseModal({
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+            <div className="flex-1 overflow-y-auto px-5 pt-5 pb-24 md:pb-16 space-y-6">
               {cityExpenses.length === 0 ? (
                 <div className="py-12 text-center space-y-3">
                   <div className="w-12 h-12 bg-toss-bg rounded-full flex items-center justify-center mx-auto text-xl">
