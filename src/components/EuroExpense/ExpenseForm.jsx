@@ -58,10 +58,6 @@ export default function ExpenseForm({
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (!city.trim()) {
-      alert('도시명을 입력해 주세요.');
-      return;
-    }
     if (!description.trim()) {
       alert('지출 내역을 입력해 주세요.');
       return;
@@ -73,7 +69,7 @@ export default function ExpenseForm({
 
     const payload = {
       id: editItem?.id || `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      city: city.trim(),
+      city: city.trim() || '미지정',
       country: country.trim() || '유럽',
       category,
       amount: Number(amount),
@@ -166,7 +162,6 @@ export default function ExpenseForm({
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       className="w-full bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0"
-                      required
                     />
                   </div>
                   <div className="flex items-center gap-2 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
