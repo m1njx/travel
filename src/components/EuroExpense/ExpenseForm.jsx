@@ -14,7 +14,6 @@ export default function ExpenseForm({
   onAddPaymentMethod
 }) {
   const [city, setCity] = useState('');
-  const [country, setCountry] = useState('');
   const [category, setCategory] = useState('food');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('EUR');
@@ -27,7 +26,6 @@ export default function ExpenseForm({
   useEffect(() => {
     if (editItem) {
       setCity(editItem.city || '');
-      setCountry(editItem.country || '');
       setCategory(editItem.category || 'food');
       setAmount(editItem.amount ? editItem.amount.toString() : '');
       setCurrency(editItem.currency || 'EUR');
@@ -41,7 +39,6 @@ export default function ExpenseForm({
     } else {
       // Reset to defaults
       setCity('');
-      setCountry('');
       setCategory('food');
       setAmount('');
       setCurrency('EUR');
@@ -51,9 +48,8 @@ export default function ExpenseForm({
     }
   }, [editItem, isOpen]);
 
-  const handleCitySelect = (selectedCity, selectedCountry) => {
+  const handleCitySelect = (selectedCity) => {
     setCity(selectedCity);
-    setCountry(selectedCountry);
   };
 
   const handleFormSubmit = (e) => {
@@ -67,10 +63,23 @@ export default function ExpenseForm({
       return;
     }
 
+    const matchedCity = EURO_CITY_TEMPLATES.find(t => t.city === city.trim());
+    const countryVal = matchedCity ? (
+      matchedCity.flag === '🇬🇧' ? '영국' :
+      matchedCity.flag === '🇫🇷' ? '프랑스' :
+      matchedCity.flag === '🇨🇭' ? '스위스' :
+      matchedCity.flag === '🇩🇪' ? '독일' :
+      matchedCity.flag === '🇨🇿' ? '체코' :
+      matchedCity.flag === '🇦🇹' ? '오스트리아' :
+      matchedCity.flag === '🇭🇺' ? '헝가리' :
+      matchedCity.flag === '🇮🇹' ? '이탈리아' :
+      matchedCity.flag === '🇪🇸' ? '스페인' : '유럽'
+    ) : '유럽';
+
     const payload = {
       id: editItem?.id || `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       city: city.trim() || '미지정',
-      country: country.trim() || '유럽',
+      country: countryVal,
       category,
       amount: Number(amount),
       currency,
@@ -140,7 +149,7 @@ export default function ExpenseForm({
                       <button
                         key={item.city}
                         type="button"
-                        onClick={() => handleCitySelect(item.city, item.country)}
+                        onClick={() => handleCitySelect(item.city)}
                         className={`flex-shrink-0 px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
                           city === item.city
                             ? 'bg-toss-blue-light text-toss-blue border-toss-blue/20'
@@ -153,27 +162,15 @@ export default function ExpenseForm({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2.5 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
-                    <span className="text-lg">{currentFlag}</span>
-                    <input
-                      type="text"
-                      placeholder="도시명 (예: 파리)"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
-                    <Landmark className="w-4 h-4 text-toss-text-tertiary" />
-                    <input
-                      type="text"
-                      placeholder="국가명 (예: 프랑스)"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="w-full bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0"
-                    />
-                  </div>
+                <div className="flex items-center gap-2.5 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
+                  <span className="text-lg">{currentFlag}</span>
+                  <input
+                    type="text"
+                    placeholder="도시명 (예: 파리)"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0"
+                  />
                 </div>
               </div>
 
