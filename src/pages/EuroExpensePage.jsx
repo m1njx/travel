@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
-import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, X } from 'lucide-react';
+import { 
+  EURO_CITY_TEMPLATES, 
+  EURO_CATEGORIES, 
+  formatEuroCurrency, 
+  formatKRW, 
+  convertEuroToKRW 
+} from '../utils/euroCurrency';
 import { useEuroExpenseStore } from '../store/euroExpenseStore';
 import TotalSummary from '../components/EuroExpense/TotalSummary';
 import CityBreakdown from '../components/EuroExpense/CityBreakdown';
@@ -46,6 +53,7 @@ export default function EuroExpensePage({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isRateOpen, setIsRateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [activeCityModal, setActiveCityModal] = useState(null);
 
   // Payment methods state
   const [localPaymentMethods, setLocalPaymentMethods] = useState(() => 
@@ -159,8 +167,8 @@ export default function EuroExpensePage({
       {/* 2. 도시별 지출 정보 */}
       <CityBreakdown
         stats={stats}
-        selectedCity={selectedCity}
-        onSelectCity={setSelectedCity}
+        selectedCity={activeCityModal || 'all'}
+        onSelectCity={(city) => setActiveCityModal(city === 'all' ? null : city)}
       />
 
       {/* 3. 카테고리별 정보 */}
@@ -244,6 +252,137 @@ export default function EuroExpensePage({
           rates={exchangeRates}
           onUpdateRate={handleUpdateRate}
         />,
+        document.body
+      )}
+
+      {/* City Detail Modal */}
+      {createPortal(
+        <AnimatePresence>
+          {activeCityModal && (
+            <>
+              {/* Overlay backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.4 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setActiveCityModal(null)}
+                className="fixed inset-0 bg-black z-[110] cursor-pointer"
+              />
+              
+              {/* Modal Container */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[450px] bg-white rounded-[28px] shadow-2xl z-[111] overflow-hidden border border-toss-border flex flex-col max-h-[80vh]"
+              >
+                {/* Header */}
+                <div className="px-6 py-4.5 border-b border-toss-border flex justify-between items-center bg-toss-bg/30 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">
+                      {EURO_CITY_TEMPLATES.find(t => t.city === activeCityModal)?.flag || '📍'}
+                    </span>
+                    <h3 className="font-extrabold text-toss-text-primary text-[15px] sm:text-base">
+                      {activeCityModal} 지출 상세 내역
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setActiveCityModal(null)}
+                    className="p-1.5 hover:bg-toss-bg rounded-full transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5 text-toss-text-secondary" />
+                  </button>
+                </div>
+
+                {/* Content List */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-3.5 scrollbar-none">
+                  {(() => {
+                    const cityExpenses = myExpenses.filter(e => e.city === activeCityModal);
+                    if (cityExpenses.length === 0) {
+                      return (
+                        <p className="text-center py-8 text-xs text-toss-text-tertiary">
+                          등록된 지출이 없습니다.
+                        </p>
+                      );
+                    }
+
+                    // Sort cityExpenses by date descending
+                    const sortedCityExpenses = [...cityExpenses].sort((a, b) => {
+                      const dateA = a.date?.seconds ? a.date.seconds * 1000 : new Date(a.date).getTime();
+                      const dateB = b.date?.seconds ? b.date.seconds * 1000 : new Date(b.date).getTime();
+                      return dateB - dateA;
+                    });
+
+                    // Format date MM.DD
+                    const formatShortDate = (dateStr) => {
+                      const d = new Date(dateStr);
+                      return `${d.getMonth() + 1}.${d.getDate()}`;
+                    };
+
+                    return (
+                      <div className="space-y-2.5">
+                        {sortedCityExpenses.map((item) => {
+                          const catMeta = EURO_CATEGORIES[item.category] || EURO_CATEGORIES.etc;
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between p-3.5 bg-toss-bg/30 hover:bg-toss-bg/50 rounded-2xl border border-toss-border/40 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="w-9 h-9 rounded-full flex items-center justify-center text-base bg-white shadow-sm flex-shrink-0">
+                                  {catMeta.emoji}
+                                </div>
+                                <div className="min-w-0 flex-1 space-y-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-[13px] text-toss-text-primary truncate">
+                                      {item.description || catMeta.label}
+                                    </span>
+                                    <span className="text-[10px] text-toss-text-tertiary font-bold flex-shrink-0">
+                                      {formatShortDate(item.date)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] text-toss-text-tertiary">
+                                      {formatEuroCurrency(item.amount, item.currency)}
+                                    </span>
+                                    {item.paymentMethod && (
+                                      <span className="text-[9px] px-1.5 py-0.2 bg-toss-blue-light text-toss-blue rounded-md font-bold">
+                                        {item.paymentMethod}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0 pl-2">
+                                <span className="font-extrabold text-[14px] text-toss-text-primary">
+                                  {formatKRW(convertEuroToKRW(item.amount, item.currency, exchangeRates))}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+                
+                {/* Footer showing total city spending */}
+                <div className="px-6 py-4.5 bg-toss-bg/40 border-t border-toss-border/60 flex justify-between items-center flex-shrink-0">
+                  <span className="text-xs font-bold text-toss-text-secondary">도시 합계</span>
+                  <span className="text-base font-extrabold text-toss-blue font-mono">
+                    {(() => {
+                      const cityTotal = myExpenses
+                        .filter(e => e.city === activeCityModal)
+                        .reduce((sum, e) => sum + convertEuroToKRW(e.amount, e.currency, exchangeRates), 0);
+                      return formatKRW(cityTotal);
+                    })()}
+                  </span>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
         document.body
       )}
     </div>
