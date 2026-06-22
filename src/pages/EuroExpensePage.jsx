@@ -21,6 +21,7 @@ export default function EuroExpensePage({
   const { items: rawExpenses, addItem, updateItem, removeItem } = sync;
   
   // Zustand Store state & actions
+  const expenses = useEuroExpenseStore((state) => state.expenses);
   const setExpenses = useEuroExpenseStore((state) => state.setExpenses);
   const exchangeRates = useEuroExpenseStore((state) => state.exchangeRates);
   const setExchangeRates = useEuroExpenseStore((state) => state.setExchangeRates);
