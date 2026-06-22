@@ -8,7 +8,8 @@ export default function ExpenseForm({
   onClose,
   onSubmit,
   editItem = null,
-  existingCities = []
+  existingCities = [],
+  nickname
 }) {
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
@@ -69,7 +70,8 @@ export default function ExpenseForm({
       currency,
       description: description.trim(),
       date: new Date(date).toISOString(),
-      createdAt: editItem?.createdAt || new Date().toISOString()
+      createdAt: editItem?.createdAt || new Date().toISOString(),
+      createdBy: editItem?.createdBy || nickname
     };
 
     onSubmit(payload);

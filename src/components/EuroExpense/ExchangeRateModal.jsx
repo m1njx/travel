@@ -92,7 +92,7 @@ export default function ExchangeRateModal({
               </p>
 
               <div className="space-y-3">
-                {Object.values(EURO_CURRENCIES).map((curr) => {
+                {Object.values(EURO_CURRENCIES).filter((curr) => curr.code !== 'KRW').map((curr) => {
                   const val = localRates[curr.code] !== undefined ? localRates[curr.code] : curr.defaultRate;
                   return (
                     <div

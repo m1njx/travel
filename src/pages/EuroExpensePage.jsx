@@ -49,8 +49,9 @@ export default function EuroExpensePage({
 
   // Sync firestore raw items to Zustand store
   useEffect(() => {
-    setExpenses(rawExpenses || []);
-  }, [rawExpenses, setExpenses]);
+    const myExpenses = (rawExpenses || []).filter(e => e.createdBy === nickname || !e.createdBy);
+    setExpenses(myExpenses);
+  }, [rawExpenses, nickname, setExpenses]);
 
   // Sync firestore custom exchange rates if present
   useEffect(() => {
@@ -106,8 +107,9 @@ export default function EuroExpensePage({
   const filteredExpenses = getFilteredExpenses();
 
   // Extract unique cities list for helper suggestion
+  const myExpenses = (rawExpenses || []).filter(e => e.createdBy === nickname || !e.createdBy);
   const existingCities = Array.from(
-    new Set((rawExpenses || []).map((e) => e.city))
+    new Set(myExpenses.map((e) => e.city))
   ).filter(Boolean);
 
   return (
@@ -274,6 +276,7 @@ export default function EuroExpensePage({
         onSubmit={handleAddOrEditExpense}
         editItem={editingItem}
         existingCities={existingCities}
+        nickname={nickname}
       />
 
       <ExchangeRateModal
