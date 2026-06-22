@@ -69,7 +69,10 @@ export default function EuroExpensePage({
 
   // Sync firestore raw items to Zustand store
   useEffect(() => {
+    console.log('[EuroExpensePage] rawExpenses from Firebase:', rawExpenses);
+    console.log('[EuroExpensePage] Current nickname:', nickname);
     const myExpenses = (rawExpenses || []).filter(e => e.createdBy === nickname || !e.createdBy);
+    console.log('[EuroExpensePage] Filtered myExpenses:', myExpenses);
     setExpenses(myExpenses);
   }, [rawExpenses, nickname, setExpenses]);
 
@@ -146,31 +149,27 @@ export default function EuroExpensePage({
         </div>
       </div>
 
-      {/* Category Summary at the very top */}
+      {/* 1. 총 경비 */}
+      <TotalSummary
+        stats={stats}
+        onOpenExchangeRateModal={() => setIsRateOpen(true)}
+      />
+
+      {/* 2. 도시별 지출 정보 */}
+      <CityBreakdown
+        stats={stats}
+        selectedCity={selectedCity}
+        onSelectCity={setSelectedCity}
+      />
+
+      {/* 3. 카테고리별 정보 */}
       <CategorySummary
         stats={stats}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
       />
 
-      {/* Grid: Summary & Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="md:col-span-2">
-          <TotalSummary
-            stats={stats}
-            onOpenExchangeRateModal={() => setIsRateOpen(true)}
-          />
-        </div>
-        <div className="h-full">
-          <CityBreakdown
-            stats={stats}
-            selectedCity={selectedCity}
-            onSelectCity={setSelectedCity}
-          />
-        </div>
-      </div>
-
-      {/* Main List (Full Width) */}
+      {/* 4. 전체 지출 내역 (Full Width) */}
       <div className="space-y-4">
         <div className="flex justify-between items-center px-1">
           <h3 className="text-base font-bold text-toss-text-primary">
