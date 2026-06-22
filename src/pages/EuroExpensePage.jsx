@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { motion } from 'framer-motion';
-import { Plus, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEuroExpenseStore } from '../store/euroExpenseStore';
 import TotalSummary from '../components/EuroExpense/TotalSummary';
 import CityBreakdown from '../components/EuroExpense/CityBreakdown';
@@ -45,9 +45,6 @@ export default function EuroExpensePage({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isRateOpen, setIsRateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  
-  // Mobile filter expand state
-  const [showFilters, setShowFilters] = useState(false);
 
   // Payment methods state
   const [localPaymentMethods, setLocalPaymentMethods] = useState(() => 
@@ -149,6 +146,13 @@ export default function EuroExpensePage({
         </div>
       </div>
 
+      {/* Category Summary at the very top */}
+      <CategorySummary
+        stats={stats}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+      />
+
       {/* Grid: Summary & Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="md:col-span-2">
@@ -166,113 +170,36 @@ export default function EuroExpensePage({
         </div>
       </div>
 
-      {/* Control Panel (Filter/Sort) */}
-      <div className="bg-white rounded-[24px] border border-toss-border p-4.5 space-y-4">
-        <div className="flex justify-between items-center">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-toss-bg hover:bg-gray-200 text-toss-text-secondary font-bold text-xs rounded-xl transition-all cursor-pointer"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-toss-text-tertiary" />
-            <span>필터 & 정렬 상세</span>
-          </button>
-
-          {/* Quick Clear Filter Info */}
-          {(selectedCity !== 'all' || selectedCategory !== 'all' || dateRange.start || dateRange.end) && (
-            <button
-              onClick={() => {
-                setSelectedCity('all');
-                setSelectedCategory('all');
-                setDateRange(null, null);
-              }}
-              className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:underline cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>모든 필터 초기화</span>
-            </button>
-          )}
-        </div>
-
-        {/* Expandable filters detail panel */}
-        {(showFilters || selectedCity !== 'all' || selectedCategory !== 'all' || dateRange.start || dateRange.end) && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-toss-border/50">
-            {/* Sort Order */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-toss-text-secondary uppercase">
-                정렬 순서
-              </label>
-              <div className="flex items-center gap-2 bg-toss-bg rounded-xl px-3.5 py-2 border border-toss-border">
-                <ArrowUpDown className="w-3.5 h-3.5 text-toss-text-tertiary" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-toss-text-primary focus:outline-none w-full cursor-pointer"
-                >
-                  <option value="date-desc">최신 순</option>
-                  <option value="date-asc">과거 순</option>
-                  <option value="amount-desc">금액 높은 순</option>
-                  <option value="amount-asc">금액 낮은 순</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Date Range Start */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-toss-text-secondary uppercase">
-                기간 시작일
-              </label>
-              <input
-                type="date"
-                value={dateRange.start || ''}
-                onChange={(e) => setDateRange(e.target.value || null, dateRange.end)}
-                className="w-full bg-toss-bg text-xs font-bold text-toss-text-primary rounded-xl px-3.5 py-2 border border-toss-border focus:outline-none cursor-pointer"
-              />
-            </div>
-
-            {/* Date Range End */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-toss-text-secondary uppercase">
-                기간 종료일
-              </label>
-              <input
-                type="date"
-                value={dateRange.end || ''}
-                onChange={(e) => setDateRange(dateRange.start, e.target.value || null)}
-                className="w-full bg-toss-bg text-xs font-bold text-toss-text-primary rounded-xl px-3.5 py-2 border border-toss-border focus:outline-none cursor-pointer"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Main Grid: List & Category breakdown side-by-side on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        <div className="md:col-span-2 space-y-4">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-base font-bold text-toss-text-primary">
-              {selectedCity !== 'all' ? `${selectedCity} 지출 목록` : '전체 지출 내역'}
-            </h3>
+      {/* Main List (Full Width) */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center px-1">
+          <h3 className="text-base font-bold text-toss-text-primary">
+            {selectedCity !== 'all' ? `${selectedCity} 지출 목록` : '전체 지출 내역'}
+          </h3>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-[11px] font-bold text-toss-text-tertiary">
               검색결과 {filteredExpenses.length}건
             </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-white text-[11px] font-bold text-toss-text-secondary rounded-lg px-2.5 py-1.5 border border-toss-border focus:outline-none cursor-pointer shadow-sm"
+            >
+              <option value="date-desc">최신순</option>
+              <option value="date-asc">과거순</option>
+              <option value="amount-desc">금액높은순</option>
+              <option value="amount-asc">금액낮은순</option>
+            </select>
           </div>
-          <ExpenseList
-            expenses={filteredExpenses}
-            onEdit={(item) => {
-              setEditingItem(item);
-              setIsFormOpen(true);
-            }}
-            onDelete={handleDeleteExpense}
-          />
         </div>
-
-        <div className="space-y-4">
-          <CategorySummary
-            stats={stats}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
-        </div>
+        <ExpenseList
+          expenses={filteredExpenses}
+          onEdit={(item) => {
+            setEditingItem(item);
+            setIsFormOpen(true);
+          }}
+          onDelete={handleDeleteExpense}
+        />
       </div>
 
       {/* Floating Action Button (FAB) */}
