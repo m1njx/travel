@@ -9,7 +9,9 @@ export default function ExpenseForm({
   onSubmit,
   editItem = null,
   existingCities = [],
-  nickname
+  nickname,
+  paymentMethods = ['현금', '카드', '트래블로그', '트래블월렛'],
+  onAddPaymentMethod
 }) {
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
@@ -18,6 +20,8 @@ export default function ExpenseForm({
   const [currency, setCurrency] = useState('EUR');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [paymentMethod, setPaymentMethod] = useState('현금');
+  const [customMethodInput, setCustomMethodInput] = useState('');
 
   // Sync state if editing
   useEffect(() => {
@@ -28,6 +32,7 @@ export default function ExpenseForm({
       setAmount(editItem.amount ? editItem.amount.toString() : '');
       setCurrency(editItem.currency || 'EUR');
       setDescription(editItem.description || '');
+      setPaymentMethod(editItem.paymentMethod || '현금');
       
       const itemDate = editItem.date?.seconds 
         ? new Date(editItem.date.seconds * 1000) 
@@ -41,6 +46,7 @@ export default function ExpenseForm({
       setAmount('');
       setCurrency('EUR');
       setDescription('');
+      setPaymentMethod('현금');
       setDate(new Date().toISOString().split('T')[0]);
     }
   }, [editItem, isOpen]);
@@ -54,6 +60,10 @@ export default function ExpenseForm({
     e.preventDefault();
     if (!city.trim()) {
       alert('도시명을 입력해 주세요.');
+      return;
+    }
+    if (!description.trim()) {
+      alert('지출 내역을 입력해 주세요.');
       return;
     }
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
@@ -71,7 +81,8 @@ export default function ExpenseForm({
       description: description.trim(),
       date: new Date(date).toISOString(),
       createdAt: editItem?.createdAt || new Date().toISOString(),
-      createdBy: editItem?.createdBy || nickname
+      createdBy: editItem?.createdBy || nickname,
+      paymentMethod
     };
 
     onSubmit(payload);
@@ -120,56 +131,7 @@ export default function ExpenseForm({
             </div>
 
             <form onSubmit={handleFormSubmit} className="flex-1 px-6 py-5 space-y-6">
-              {/* Currency & Amount Input (Big Toss Style) */}
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
-                  금액 입력
-                </label>
-                <div className="flex items-center gap-3 bg-toss-bg rounded-2xl px-4.5 py-4 border border-toss-border focus-within:border-toss-blue focus-within:ring-2 focus-within:ring-toss-blue/15 transition-all">
-                  <span className="text-xl font-bold text-toss-text-secondary font-mono">
-                    {EURO_CURRENCIES[currency]?.symbol || currency}
-                  </span>
-                  <input
-                    type="number"
-                    step="any"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="flex-1 bg-transparent text-xl font-extrabold text-toss-text-primary focus:outline-none border-none p-0 font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Currency Chips Selector */}
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
-                  통화 선택
-                </label>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {Object.values(EURO_CURRENCIES).map((curr) => {
-                    const isSelected = currency === curr.code;
-                    return (
-                      <button
-                        key={curr.code}
-                        type="button"
-                        onClick={() => setCurrency(curr.code)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 cursor-pointer ${
-                          isSelected
-                            ? 'bg-toss-blue text-white border-toss-blue'
-                            : 'bg-white text-toss-text-secondary border-toss-border hover:bg-toss-bg'
-                        }`}
-                      >
-                        <span>{curr.flag}</span>
-                        <span>{curr.code}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* City Suggestion Chips & Custom Inputs */}
+              {/* 1. 도시 및 국가 */}
               <div className="space-y-3.5">
                 <div>
                   <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider block mb-2">
@@ -220,7 +182,91 @@ export default function ExpenseForm({
                 </div>
               </div>
 
-              {/* Category Grid */}
+              {/* 2. 지출 내역 (Description) */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
+                  지출 내역
+                </label>
+                <div className="flex items-center gap-3 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
+                  <FileText className="w-4 h-4 text-toss-text-tertiary flex-shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="예: 에펠탑 입장권, 식당 저녁식사 등"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 3. 지출 날짜 */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
+                  지출 날짜
+                </label>
+                <div className="flex items-center gap-3 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
+                  <Calendar className="w-5 h-5 text-toss-text-tertiary" />
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="flex-1 bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0 cursor-pointer"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 4. 금액 입력 */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
+                  지출 금액
+                </label>
+                <div className="flex items-center gap-3 bg-toss-bg rounded-2xl px-4.5 py-4 border border-toss-border focus-within:border-toss-blue focus-within:ring-2 focus-within:ring-toss-blue/15 transition-all">
+                  <span className="text-xl font-bold text-toss-text-secondary font-mono">
+                    {EURO_CURRENCIES[currency]?.symbol || currency}
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="flex-1 bg-transparent text-xl font-extrabold text-toss-text-primary focus:outline-none border-none p-0 font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 통화 선택 */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
+                  통화 선택
+                </label>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {Object.values(EURO_CURRENCIES).map((curr) => {
+                    const isSelected = currency === curr.code;
+                    return (
+                      <button
+                        key={curr.code}
+                        type="button"
+                        onClick={() => setCurrency(curr.code)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 cursor-pointer ${
+                          isSelected
+                            ? 'bg-toss-blue text-white border-toss-blue'
+                            : 'bg-white text-toss-text-secondary border-toss-border hover:bg-toss-bg'
+                        }`}
+                      >
+                        <span>{curr.flag}</span>
+                        <span>{curr.code}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 5. 카테고리 선택 */}
               <div className="space-y-2.5">
                 <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
                   카테고리 선택
@@ -247,37 +293,57 @@ export default function ExpenseForm({
                 </div>
               </div>
 
-              {/* Date Input */}
-              <div className="space-y-2">
+              {/* 6. 결제 방법 선택 */}
+              <div className="space-y-2.5">
                 <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
-                  지출 날짜
+                  결제 방법 선택
                 </label>
-                <div className="flex items-center gap-3 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
-                  <Calendar className="w-5 h-5 text-toss-text-tertiary" />
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="flex-1 bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0 cursor-pointer"
-                    required
-                  />
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-wrap">
+                  {paymentMethods.map((method) => {
+                    const isSelected = paymentMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPaymentMethod(method)}
+                        className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 cursor-pointer ${
+                          isSelected
+                            ? 'bg-toss-blue text-white border-toss-blue'
+                            : 'bg-white text-toss-text-secondary border-toss-border hover:bg-toss-bg'
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-
-              {/* Description/Memo */}
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">
-                  메모 (선택사항)
-                </label>
-                <div className="flex items-center gap-3 bg-toss-bg rounded-2xl px-4 py-3.5 border border-toss-border focus-within:border-toss-blue transition-all">
-                  <FileText className="w-4 h-4 text-toss-text-tertiary flex-shrink-0" />
+                
+                {/* 결제 방법 추가 인풋 */}
+                <div className="flex gap-2 mt-2">
                   <input
                     type="text"
-                    placeholder="지출에 대한 메모 입력..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-transparent text-sm font-semibold text-toss-text-primary focus:outline-none border-none p-0"
+                    placeholder="새 결제 방법 추가 (예: 토스카드)"
+                    value={customMethodInput}
+                    onChange={(e) => setCustomMethodInput(e.target.value)}
+                    className="flex-1 bg-toss-bg text-xs font-semibold text-toss-text-primary rounded-xl px-3.5 py-2 border border-toss-border focus:outline-none focus:border-toss-blue focus:ring-1 focus:ring-toss-blue/15"
                   />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const clean = customMethodInput.trim();
+                      if (!clean) return;
+                      if (paymentMethods.includes(clean)) {
+                        alert('이미 존재하는 결제 방법입니다.');
+                        return;
+                      }
+                      onAddPaymentMethod(clean);
+                      setPaymentMethod(clean);
+                      setCustomMethodInput('');
+                    }}
+                    className="px-3.5 py-2 bg-toss-bg hover:bg-gray-200 active:scale-95 text-toss-text-secondary font-bold text-xs rounded-xl border border-toss-border transition-all cursor-pointer"
+                  >
+                    추가
+                  </button>
                 </div>
               </div>
 

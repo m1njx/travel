@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { motion } from 'framer-motion';
 import { Plus, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react';
 import { useEuroExpenseStore } from '../store/euroExpenseStore';
@@ -47,6 +48,27 @@ export default function EuroExpensePage({
   
   // Mobile filter expand state
   const [showFilters, setShowFilters] = useState(false);
+
+  // Payment methods state
+  const [localPaymentMethods, setLocalPaymentMethods] = useState(() => 
+    loadFromStorage('euro_payment_methods') || ['현금', '카드', '트래블로그', '트래블월렛']
+  );
+
+  const paymentMethods = (meta && meta.euroPaymentMethods) 
+    ? meta.euroPaymentMethods 
+    : localPaymentMethods;
+
+  const handleAddPaymentMethod = async (newMethod) => {
+    const current = (meta && meta.euroPaymentMethods) ? meta.euroPaymentMethods : localPaymentMethods;
+    if (!current.includes(newMethod)) {
+      const updated = [...current, newMethod];
+      if (meta && updateMeta) {
+        await updateMeta({ euroPaymentMethods: updated });
+      }
+      setLocalPaymentMethods(updated);
+      saveToStorage('euro_payment_methods', updated);
+    }
+  };
 
   // Sync firestore raw items to Zustand store
   useEffect(() => {
@@ -282,6 +304,8 @@ export default function EuroExpensePage({
           editItem={editingItem}
           existingCities={existingCities}
           nickname={nickname}
+          paymentMethods={paymentMethods}
+          onAddPaymentMethod={handleAddPaymentMethod}
         />,
         document.body
       )}

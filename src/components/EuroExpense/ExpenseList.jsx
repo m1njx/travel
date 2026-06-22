@@ -95,13 +95,18 @@ export default function ExpenseList({
 
                       {/* Details */}
                       <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-sm text-toss-text-primary truncate">
                             {item.description || catMeta.label}
                           </span>
                           <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-toss-bg text-toss-text-secondary text-[10px] rounded-full font-bold">
                             {flag} {item.city}
                           </span>
+                          {item.paymentMethod && (
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-toss-blue-light text-toss-blue text-[10px] rounded-full font-bold">
+                              💳 {item.paymentMethod}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-toss-text-tertiary truncate">
                           {formatEuroCurrency(item.amount, item.currency)}
