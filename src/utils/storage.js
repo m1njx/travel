@@ -2,6 +2,8 @@
 const STORAGE_KEYS = {
   SCHEDULES: 'tripsync_schedules',
   EXPENSES: 'tripsync_expenses',
+  EURO_EXPENSES: 'tripsync_euro_expenses',
+  EURO_EXCHANGE_RATES: 'tripsync_euro_exchange_rates',
   MEMBERS: 'tripsync_members',
   EXCHANGE_RATES: 'tripsync_exchange_rates',
   SETTINGS: 'tripsync_settings',

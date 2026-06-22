@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard, Shield, Loader, WifiOff, Check } from 'lucide-react';
+import { Calendar, Wallet, Users, Settings, Pin, Backpack, LayoutDashboard, Shield, Loader, WifiOff, Check, Coins } from 'lucide-react';
 import DashboardPage from './pages/DashboardPage';
 import PlannerPage from './pages/PlannerPage';
 import ExpensePage from './pages/ExpensePage';
+import EuroExpensePage from './pages/EuroExpensePage';
 import SettlePage from './pages/SettlePage';
 import SettingsPage from './pages/SettingsPage';
 import MemoPage from './pages/MemoPage';
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'dashboard', label: '홈', icon: LayoutDashboard },
   { id: 'planner', label: '일정', icon: Calendar },
   { id: 'expense', label: '가계부/정산', icon: Wallet },
+  { id: 'euroExpense', label: '유럽 경비', icon: Coins },
   { id: 'checklist', label: '준비물', icon: Backpack },
   { id: 'memo', label: '메모', icon: Pin },
   { id: 'settings', label: '설정', icon: Settings },
@@ -72,6 +74,7 @@ export default function App() {
   // Synced data via hooks (used in child pages via props) - with auto-sync
   const schedulesSync = useSyncedList(roomCode, 'schedules', STORAGE_KEYS.SCHEDULES, onlineStatus);
   const expensesSync = useSyncedList(roomCode, 'expenses', STORAGE_KEYS.EXPENSES, onlineStatus);
+  const euroExpensesSync = useSyncedList(roomCode, 'euroExpenses', STORAGE_KEYS.EURO_EXPENSES, onlineStatus);
   const checklistsSync = useSyncedList(roomCode, 'checklists', STORAGE_KEYS.CHECKLISTS, onlineStatus);
 
   // Active member and their assigned teams
@@ -284,6 +287,7 @@ export default function App() {
         { id: 'dashboard', label: '홈', icon: LayoutDashboard },
         { id: 'planner', label: '일정', icon: Calendar },
         { id: 'expense', label: '가계부/정산', icon: Wallet },
+        { id: 'euroExpense', label: '유럽 경비', icon: Coins },
         { id: 'checklist', label: '준비물', icon: Backpack },
         { id: 'memo', label: '메모', icon: Pin },
         { id: 'logs', label: '로그', icon: Shield },
@@ -467,6 +471,15 @@ export default function App() {
                   logAction={logAction}
                 />
               )}
+              {activeTab === 'euroExpense' && (
+                <EuroExpensePage
+                  sync={euroExpensesSync}
+                  meta={meta}
+                  updateMeta={updateMeta}
+                  logAction={logAction}
+                  nickname={nickname}
+                />
+              )}
 
               {activeTab === 'checklist' && (
                 <ChecklistPage
@@ -474,6 +487,9 @@ export default function App() {
                   members={memberNames}
                   nickname={nickname}
                   logAction={logAction}
+                  apiKey={apiKey}
+                  schedules={schedulesSync.items}
+                  logs={logs}
                 />
               )}
               {activeTab === 'memo' && (
