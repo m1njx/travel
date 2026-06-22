@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Edit2, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
 import { EURO_CATEGORIES, EURO_CITY_TEMPLATES, formatEuroCurrency, formatKRW } from '../../utils/euroCurrency';
@@ -35,13 +35,18 @@ export default function ExpenseList({
   // Sort dates descending
   const sortedDates = Object.keys(groupMap).sort((a, b) => new Date(b) - new Date(a));
 
-  const [expandedDates, setExpandedDates] = useState(() => {
-    // Expand only the first date group by default to prevent visual fatigue
-    if (sortedDates.length > 0) {
-      return { [sortedDates[0]]: true };
+  const [expandedDates, setExpandedDates] = useState({});
+  const [prevDatesCount, setPrevDatesCount] = useState(0);
+
+  useEffect(() => {
+    if (sortedDates.length > 0 && sortedDates.length !== prevDatesCount) {
+      setExpandedDates(prev => ({
+        ...prev,
+        [sortedDates[0]]: true
+      }));
+      setPrevDatesCount(sortedDates.length);
     }
-    return {};
-  });
+  }, [sortedDates, prevDatesCount]);
 
   const toggleDate = (dateKey) => {
     setExpandedDates(prev => ({
