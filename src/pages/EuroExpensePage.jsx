@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Plus, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react';
 import { useEuroExpenseStore } from '../store/euroExpenseStore';
@@ -253,38 +254,47 @@ export default function EuroExpensePage({
       </div>
 
       {/* Floating Action Button (FAB) */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => {
-          setEditingItem(null);
-          setIsFormOpen(true);
-        }}
-        className="fixed bottom-24 right-5 md:bottom-8 md:right-8 w-14 h-14 bg-toss-blue hover:bg-blue-600 active:scale-95 text-white rounded-full flex items-center justify-center shadow-lg shadow-toss-blue/35 z-40 cursor-pointer"
-        title="지출 등록"
-      >
-        <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
-      </motion.button>
+      {createPortal(
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            setEditingItem(null);
+            setIsFormOpen(true);
+          }}
+          className="fixed bottom-24 right-5 md:bottom-8 md:right-8 w-14 h-14 bg-toss-blue hover:bg-blue-600 active:scale-95 text-white rounded-full flex items-center justify-center shadow-lg shadow-toss-blue/35 z-40 cursor-pointer"
+          title="지출 등록"
+        >
+          <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
+        </motion.button>,
+        document.body
+      )}
 
       {/* Forms & Modals */}
-      <ExpenseForm
-        isOpen={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false);
-          setEditingItem(null);
-        }}
-        onSubmit={handleAddOrEditExpense}
-        editItem={editingItem}
-        existingCities={existingCities}
-        nickname={nickname}
-      />
+      {createPortal(
+        <ExpenseForm
+          isOpen={isFormOpen}
+          onClose={() => {
+            setIsFormOpen(false);
+            setEditingItem(null);
+          }}
+          onSubmit={handleAddOrEditExpense}
+          editItem={editingItem}
+          existingCities={existingCities}
+          nickname={nickname}
+        />,
+        document.body
+      )}
 
-      <ExchangeRateModal
-        isOpen={isRateOpen}
-        onClose={() => setIsRateOpen(false)}
-        rates={exchangeRates}
-        onUpdateRate={handleUpdateRate}
-      />
+      {createPortal(
+        <ExchangeRateModal
+          isOpen={isRateOpen}
+          onClose={() => setIsRateOpen(false)}
+          rates={exchangeRates}
+          onUpdateRate={handleUpdateRate}
+        />,
+        document.body
+      )}
     </div>
   );
 }
