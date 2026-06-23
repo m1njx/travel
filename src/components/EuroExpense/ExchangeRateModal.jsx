@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, RefreshCw, Check } from 'lucide-react';
+import { X, RefreshCw, Check, Sparkles } from 'lucide-react';
 import { EURO_CURRENCIES, DEFAULT_EURO_RATES } from '../../utils/euroCurrency';
+
+const formatRateTime = (ts) => {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${month}/${day} ${hours}:${minutes}`;
+};
 
 export default function ExchangeRateModal({
   isOpen,
@@ -10,12 +20,39 @@ export default function ExchangeRateModal({
   onUpdateRate
 }) {
   const [localRates, setLocalRates] = useState({});
+  const [geminiData, setGeminiData] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
       setLocalRates({ ...rates });
+      try {
+        const stored = localStorage.getItem('tripsync_exchange_rates');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.rates) {
+            setGeminiData(parsed);
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+      }
     }
   }, [rates, isOpen]);
+
+  const handleApplyGeminiRates = () => {
+    if (geminiData && geminiData.rates) {
+      setLocalRates(prev => {
+        const next = { ...prev };
+        Object.keys(geminiData.rates).forEach(code => {
+          if (code !== 'KRW') {
+            next[code] = geminiData.rates[code];
+          }
+        });
+        return next;
+      });
+      alert('Gemini가 조회한 실시간 환율을 적용했습니다. 저장 버튼을 누르면 최종 적용됩니다.');
+    }
+  };
 
   const handleInputChange = (code, val) => {
     setLocalRates(prev => ({
@@ -90,6 +127,30 @@ export default function ExchangeRateModal({
               <p className="text-[12px] text-toss-text-secondary leading-relaxed mb-1">
                 유럽 여행지에서 사용하는 각 통화의 1 단위당 원화(KRW) 가치를 직접 설정합니다. 지출 내역의 원화 환산 시 적용됩니다.
               </p>
+
+              {/* Gemini Exchange Rates Panel */}
+              {geminiData && (
+                <div className="p-3.5 bg-toss-blue/5 border border-toss-blue/15 rounded-2xl text-left flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11.5px] font-black text-toss-blue flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" /> Gemini 실시간 검색 환율
+                    </span>
+                    <span className="text-[9.5px] font-bold text-toss-text-tertiary">
+                      {formatRateTime(geminiData.lastUpdated)} 기준
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-toss-text-secondary leading-relaxed">
+                    가계부에서 AI가 조회한 실시간 환율 정보를 수동 환율로 일괄 가져옵니다.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleApplyGeminiRates}
+                    className="w-full py-2 bg-toss-blue text-white rounded-xl text-xs font-black hover:bg-blue-600 transition-colors cursor-pointer shadow-sm shadow-toss-blue/5"
+                  >
+                    Gemini 환율 가져와 채우기
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-3">
                 {Object.values(EURO_CURRENCIES).filter((curr) => curr.code !== 'KRW').map((curr) => {

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Wallet, Backpack, Sparkles, CheckCircle2, Circle, 
   ChevronRight, TrendingUp, AlertCircle, RefreshCw, Compass, ArrowRight,
-  Plus, Edit2, Check, X,
+  Plus, Edit2, Check, X, Plane,
   Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
   Wind, Droplets
 } from 'lucide-react';
@@ -121,6 +121,49 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
   });
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState(String(totalBudget));
+
+  // Departure countdown (30 hours from 2026-06-23T23:29:26+09:00 -> 2026-06-25T05:30:00+09:00)
+  const DEPARTURE_TIME = new Date('2026-06-25T05:30:00+09:00').getTime();
+  const [timeLeft, setTimeLeft] = useState(DEPARTURE_TIME - Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(DEPARTURE_TIME - Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTimeLeft = () => {
+    if (timeLeft <= 0) return '출국 완료! ✈️';
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    return `${hours}시간 ${mins}분 ${secs}초`;
+  };
+
+  // Departure emergency checklist
+  const [takeoffChecklist, setTakeoffChecklist] = useState(() => {
+    try {
+      const stored = localStorage.getItem('tripsync_takeoff_checklist');
+      return stored ? JSON.parse(stored) : {
+        passport: false,
+        sim: false,
+        card: false,
+        ticket: false,
+        adapter: false,
+      };
+    } catch {
+      return { passport: false, sim: false, card: false, ticket: false, adapter: false };
+    }
+  });
+
+  const handleTakeoffCheckToggle = (key) => {
+    setTakeoffChecklist(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('tripsync_takeoff_checklist', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // AI travel tip states
   const [aiTip, setAiTip] = useState(() => {
@@ -554,6 +597,60 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           )}
         </motion.div>
       )}
+
+      {/* 🚨 실시간 출국 카운트다운 & 5대 필수 준비물 체크리스트 */}
+      <motion.div 
+        variants={itemVariants} 
+        className="p-5 bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-3xl border border-indigo-500/20 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden"
+      >
+        <div className="absolute right-[-10px] top-[-10px] opacity-10 pointer-events-none">
+          <Plane className="w-36 h-36 rotate-45 text-white" />
+        </div>
+        
+        <div className="relative z-10 space-y-1 text-left">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/25 border border-indigo-500/40 text-indigo-300 text-[11px] font-extrabold rounded-full">
+            ✈️ 실시간 출국 카운트다운
+          </span>
+          <h3 className="text-[20px] sm:text-[22px] font-black tracking-tight pt-1">
+            출국까지 <span className="text-yellow-400 tabular-nums animate-pulse font-mono">{formatTimeLeft()}</span>
+          </h3>
+          <p className="text-[12px] text-slate-400">
+            30시간 내에 안전하게 비행기 탑승 준비를 끝내세요!
+          </p>
+        </div>
+
+        <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex-1 max-w-xl">
+          <h4 className="text-[11.5px] font-bold text-slate-300 uppercase tracking-wider mb-2.5 text-left">
+            🚨 탑승 직전 5대 필수 품목 최종 점검
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {[
+              { key: 'passport', label: '여권', emoji: '🛂' },
+              { key: 'sim', label: '유심/eSIM', emoji: '📶' },
+              { key: 'card', label: '트래블카드', emoji: '💳' },
+              { key: 'ticket', label: '항공권', emoji: '🎫' },
+              { key: 'adapter', label: '멀티어댑터', emoji: '🔌' }
+            ].map(item => {
+              const isChecked = takeoffChecklist[item.key];
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => handleTakeoffCheckToggle(item.key)}
+                  className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    isChecked
+                      ? 'bg-emerald-500 border-emerald-400 text-white shadow-md'
+                      : 'bg-white/5 border-white/15 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="text-sm">{item.emoji}</span>
+                  <span className="truncate">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </motion.div>
 
       {/* Grid: 3 Core Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -993,6 +1090,53 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
             )}
           </div>
         )}
+
+        {/* 모바일 실시간 출국 카운트다운 & 5대 필수 준비물 체크리스트 */}
+        <div className="mx-4 mt-4 p-4.5 bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-3xl border border-indigo-500/20 shadow-md relative overflow-hidden flex flex-col gap-3.5">
+          <div className="absolute right-[-10px] top-[-10px] opacity-10 pointer-events-none">
+            <Compass className="w-28 h-28 rotate-12 text-white" />
+          </div>
+          
+          <div className="relative z-10 space-y-0.5 text-left">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-500/25 border border-indigo-500/40 text-indigo-300 text-[10px] font-extrabold rounded-full">
+              ✈️ 실시간 출국 카운트다운
+            </span>
+            <h3 className="text-[17px] font-black tracking-tight pt-1">
+              출국까지 <span className="text-yellow-400 tabular-nums font-mono">{formatTimeLeft()}</span>
+            </h3>
+          </div>
+
+          <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-3">
+            <h4 className="text-[10.5px] font-bold text-slate-300 uppercase tracking-wider mb-2 text-left">
+              🚨 탑승 직전 5대 필수 품목 최종 점검
+            </h4>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { key: 'passport', label: '여권 🛂' },
+                { key: 'sim', label: '유심 📶' },
+                { key: 'card', label: '카드 💳' },
+                { key: 'ticket', label: '항공권 🎫' },
+                { key: 'adapter', label: '어댑터 🔌' }
+              ].map(item => {
+                const isChecked = takeoffChecklist[item.key];
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => handleTakeoffCheckToggle(item.key)}
+                    className={`py-2 px-1 rounded-xl border flex items-center justify-center gap-1 text-[11px] font-bold transition-all cursor-pointer ${
+                      isChecked
+                        ? 'bg-emerald-500 border-emerald-400 text-white shadow-md'
+                        : 'bg-white/5 border-white/15 text-slate-355 hover:bg-white/10'
+                    }`}
+                  >
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
         {/* Active Schedules Feed */}
         <div className="flex flex-col mt-5">

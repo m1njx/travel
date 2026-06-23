@@ -7,6 +7,24 @@ import SettlePage from './SettlePage';
 
 const genId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+const CALC_DEFAULT_RATES = {
+  EUR: 1515,
+  GBP: 1775,
+  CHF: 1570,
+  CZK: 60,
+  USD: 1375,
+  HUF: 3.7,
+  PLN: 350,
+};
+
+const formatInputAmount = (val) => {
+  if (!val) return '';
+  const cleanVal = val.replace(/[^0-9.]/g, '');
+  const parts = cleanVal.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.slice(0, 2).join('.');
+};
+
 // Calculate settlement between members
 const calculateSettlement = (expenses, members) => {
   const balances = {};
@@ -55,6 +73,9 @@ const calculateSettlement = (expenses, members) => {
 
 export default function ExpensePage({ members, sync, apiKey, nickname, logAction }) {
   const { items: expenses, addItem, removeItem } = sync;
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [calcAmount, setCalcAmount] = useState('');
+  const [calcCurrency, setCalcCurrency] = useState('EUR');
   const [rates, setRates] = useState(() => {
     try {
       const stored = localStorage.getItem('tripsync_exchange_rates');
@@ -254,6 +275,10 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
     !completedSettlements.includes(`${s.from}→${s.to}:${s.amount}`)
   );
 
+  const calcResult = parseFloat(calcAmount.replace(/,/g, ''))
+    ? Math.round((parseFloat(calcAmount.replace(/,/g, '')) || 0) * (rates && rates[calcCurrency] ? rates[calcCurrency] : CALC_DEFAULT_RATES[calcCurrency] || 1))
+    : 0;
+
   return (
     <div className="pb-6">
       {/* Tab Navigation (shown both desktop and mobile) */}
@@ -297,6 +322,48 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
             <Plus className="w-4 h-4" /> 지출 기록
           </motion.button>
         </motion.div>
+
+        {/* 오프라인 환율 계산기 (Desktop) */}
+        <div className="mx-4 sm:mx-5 mb-5 p-4 bg-white border border-toss-border/60 rounded-3xl text-left flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-toss-blue/10 rounded-xl flex items-center justify-center text-toss-blue">
+              <ArrowRightLeft className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-toss-text-primary">오프라인 환율 계산기 📴</h3>
+              <p className="text-[11px] text-toss-text-secondary">인터넷 연결이 끊겨도 저장된 환율로 계산합니다.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 bg-toss-bg border border-toss-border rounded-xl px-2.5 py-1.5 focus-within:border-toss-blue transition-all">
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                value={calcAmount}
+                onChange={e => setCalcAmount(formatInputAmount(e.target.value))}
+                className="w-24 text-right font-extrabold text-sm text-toss-text-primary focus:outline-none border-none p-0 font-mono bg-transparent"
+              />
+              <select
+                value={calcCurrency}
+                onChange={e => setCalcCurrency(e.target.value)}
+                className="text-xs font-bold text-toss-text-secondary bg-transparent focus:outline-none border-none cursor-pointer"
+              >
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                <option value="PLN">PLN</option>
+              </select>
+            </div>
+            <span className="text-xs font-bold text-toss-text-tertiary">≈</span>
+            <div className="bg-toss-blue-light/50 border border-toss-blue/10 rounded-xl px-3 py-1.5">
+              <span className="text-xs font-black text-toss-blue tabular-nums font-mono">
+                ₩{calcResult.toLocaleString()}
+              </span>
+            </div>
+            <span className="text-[9.5px] font-medium text-toss-text-tertiary">
+              ({rates ? '실시간 환율' : '기본 고정 환율'} 적용)
+            </span>
+          </div>
+        </div>
 
         {/* HISTORY TAB CONTENT */}
         {activeTab === 'history' && (
@@ -475,6 +542,50 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
           </div>
         </div>
 
+        {/* 오프라인 환율 계산기 (Mobile) */}
+        <div className="mx-5 mt-4 p-4 bg-white border border-toss-border/55 rounded-3xl text-left flex flex-col gap-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-toss-blue/10 rounded-xl flex items-center justify-center text-toss-blue">
+                <ArrowRightLeft className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-toss-text-primary">오프라인 환율 계산기 📴</h3>
+              </div>
+            </div>
+            <span className="text-[9px] font-medium text-toss-text-tertiary">
+              ({rates ? '실시간 환율' : '기본 고정'} 적용)
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex-1 flex items-center gap-1.5 bg-toss-bg border border-toss-border rounded-xl px-2.5 py-1.5 focus-within:border-toss-blue transition-all">
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                value={calcAmount}
+                onChange={e => setCalcAmount(formatInputAmount(e.target.value))}
+                className="flex-1 text-right font-extrabold text-xs text-toss-text-primary focus:outline-none border-none p-0 font-mono bg-transparent"
+              />
+              <select
+                value={calcCurrency}
+                onChange={e => setCalcCurrency(e.target.value)}
+                className="text-[11px] font-bold text-toss-text-secondary bg-transparent focus:outline-none border-none cursor-pointer"
+              >
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                <option value="PLN">PLN</option>
+              </select>
+            </div>
+            <span className="text-xs font-bold text-toss-text-tertiary">≈</span>
+            <div className="flex-1 bg-toss-blue-light/50 border border-toss-blue/10 rounded-xl px-3 py-1.5 text-right">
+              <span className="text-xs font-black text-toss-blue tabular-nums font-mono">
+                ₩{calcResult.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* MOBILE HISTORY TAB */}
         {activeTab === 'history' && (
           <>
@@ -611,14 +722,6 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
 
 function getCategoryEmoji(c) { return { food:'🍽️', transport:'🚇', stay:'🏨', ticket:'🎫', shopping:'🛍️', etc:'📌' }[c] || '📌'; }
 function getCategoryLabel(c) { return { food:'식비', transport:'교통', stay:'숙소', ticket:'입장료', shopping:'쇼핑', etc:'기타' }[c] || '기타'; }
-
-const formatInputAmount = (val) => {
-  if (!val) return '';
-  const cleanVal = val.replace(/[^0-9.]/g, '');
-  const parts = cleanVal.split('.');
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return parts.slice(0, 2).join('.');
-};
 
 function AddExpenseModal({ members, onSave, onClose, rates, lastUpdated, apiKey }) {
   const [desc, setDesc] = useState('');
