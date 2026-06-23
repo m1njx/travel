@@ -5,7 +5,7 @@ import {
   ChevronRight, TrendingUp, AlertCircle, RefreshCw, Compass, ArrowRight,
   Plus, Edit2, Check, X, Plane,
   Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
-  Wind, Droplets, Siren, Phone
+  Wind, Droplets, Siren, Phone, Languages
 } from 'lucide-react';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
@@ -226,6 +226,8 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
   const DEPARTURE_TIME = new Date('2026-06-25T07:50:00+09:00').getTime();
   const [timeLeft, setTimeLeft] = useState(DEPARTURE_TIME - Date.now());
   const [isSosOpen, setIsSosOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isPhrasesOpen, setIsPhrasesOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -625,6 +627,24 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
           >
             <Siren className="w-4 h-4 text-white" />
             <span>대사관 SOS 🚨</span>
+          </button>
+
+          {/* Travel Tools Button */}
+          <button
+            onClick={() => setIsToolsOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.8 bg-toss-blue hover:bg-blue-600 text-white rounded-2xl text-[11px] sm:text-[12px] font-black shadow-md shadow-toss-blue/15 transition-all active:scale-95 cursor-pointer shrink-0"
+          >
+            <Compass className="w-4 h-4 text-white" />
+            <span>여행 도구 🧳</span>
+          </button>
+
+          {/* Survival Phrases Button */}
+          <button
+            onClick={() => setIsPhrasesOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.8 bg-teal-500 hover:bg-teal-600 text-white rounded-2xl text-[11px] sm:text-[12px] font-black shadow-md shadow-teal-500/15 transition-all active:scale-95 cursor-pointer shrink-0"
+          >
+            <Languages className="w-4 h-4 text-white" />
+            <span>생존 회화 💬</span>
           </button>
 
           {/* Real-time Weather Badge */}
@@ -1113,16 +1133,33 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
               ))}
             </div>
 
-            <div className="flex justify-between items-center mt-1.5">
-              <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight">
+            <div className="flex justify-between items-center mt-1.5 gap-2 flex-wrap">
+              <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight flex-1">
                 안녕하세요, {nickname}님 👋
               </h2>
-              <button
-                onClick={() => setIsSosOpen(true)}
-                className="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-2xl flex items-center justify-center shadow-md shadow-red-500/20 active:scale-90 transition-all cursor-pointer animate-pulse shrink-0"
-              >
-                <Siren className="w-5 h-5 text-white" />
-              </button>
+              <div className="flex gap-1.5 shrink-0">
+                <button
+                  onClick={() => setIsSosOpen(true)}
+                  className="w-9 h-9 bg-red-500 hover:bg-red-600 rounded-xl flex items-center justify-center shadow-md shadow-red-500/20 active:scale-90 transition-all cursor-pointer animate-pulse"
+                  title="대사관 SOS"
+                >
+                  <Siren className="w-4.5 h-4.5 text-white" />
+                </button>
+                <button
+                  onClick={() => setIsToolsOpen(true)}
+                  className="w-9 h-9 bg-toss-blue hover:bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-toss-blue/20 active:scale-90 transition-all cursor-pointer"
+                  title="여행 도구"
+                >
+                  <Compass className="w-4.5 h-4.5 text-white" />
+                </button>
+                <button
+                  onClick={() => setIsPhrasesOpen(true)}
+                  className="w-9 h-9 bg-teal-500 hover:bg-teal-600 rounded-xl flex items-center justify-center shadow-md shadow-teal-500/20 active:scale-90 transition-all cursor-pointer"
+                  title="생존 회화"
+                >
+                  <Languages className="w-4.5 h-4.5 text-white" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1792,6 +1829,126 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
               <div className="border-t border-toss-border/40 pt-4 mt-3 shrink-0">
                 <button
                   onClick={() => setIsSosOpen(false)}
+                  className="w-full py-4 bg-toss-bg hover:bg-toss-border/30 text-toss-text-primary rounded-2xl text-[13px] font-bold transition-all active:scale-[0.98] cursor-pointer text-center"
+                >
+                  닫기
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Travel Helper Tools Popover Modal */}
+      <AnimatePresence>
+        {isToolsOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/55 backdrop-blur-md"
+            onClick={() => setIsToolsOpen(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="w-full max-w-md bg-white border border-toss-border/60 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col text-toss-text-primary"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-toss-border/50 pb-4 mb-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8.5 h-8.5 bg-toss-blue-light rounded-xl flex items-center justify-center text-toss-blue border border-toss-blue/10">
+                    <Compass className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-[17px] font-extrabold tracking-tight">
+                      유럽 여행 편의도구 🧳
+                    </h3>
+                    <p className="text-[10.5px] text-toss-text-secondary mt-0.5 font-semibold">
+                      시차 비교, 텍스 리펀 계산기 및 교통수단 꿀팁
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsToolsOpen(false)}
+                  className="w-8 h-8 rounded-full bg-toss-bg hover:bg-toss-border/40 flex items-center justify-center text-toss-text-secondary transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Content Area - Render TravelHelperTools component (without top margin to look integrated) */}
+              <div className="flex-1 overflow-y-auto py-1 pr-0.5 scrollbar-none [&>div]:mt-0 [&>div]:p-0 [&>div]:border-none [&>div]:shadow-none">
+                <TravelHelperTools />
+              </div>
+
+              {/* Action Footer */}
+              <div className="border-t border-toss-border/40 pt-4 mt-3 shrink-0">
+                <button
+                  onClick={() => setIsToolsOpen(false)}
+                  className="w-full py-4 bg-toss-bg hover:bg-toss-border/30 text-toss-text-primary rounded-2xl text-[13px] font-bold transition-all active:scale-[0.98] cursor-pointer text-center"
+                >
+                  닫기
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Survival Phrases Popover Modal */}
+      <AnimatePresence>
+        {isPhrasesOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/55 backdrop-blur-md"
+            onClick={() => setIsPhrasesOpen(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="w-full max-w-md bg-white border border-toss-border/60 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col text-toss-text-primary"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-toss-border/50 pb-4 mb-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8.5 h-8.5 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500 border border-teal-100/50">
+                    <Languages className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-[17px] font-extrabold tracking-tight">
+                      오프라인 생존 회화 & 에티켓 💬
+                    </h3>
+                    <p className="text-[10.5px] text-toss-text-secondary mt-0.5 font-semibold">
+                      현지 필수 표현 및 국가별 상세 매너
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsPhrasesOpen(false)}
+                  className="w-8 h-8 rounded-full bg-toss-bg hover:bg-toss-border/40 flex items-center justify-center text-toss-text-secondary transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Content Area - Render SurvivalPhrases (without horizontal padding for integration) */}
+              <div className="flex-1 overflow-y-auto py-1 pr-0.5 scrollbar-none [&>div]:pt-0 [&>div]:pb-0 [&>div>div:first-child]:hidden [&>div>div:nth-child(2)>div]:px-0">
+                <SurvivalPhrases />
+              </div>
+
+              {/* Action Footer */}
+              <div className="border-t border-toss-border/40 pt-4 mt-3 shrink-0">
+                <button
+                  onClick={() => setIsPhrasesOpen(false)}
                   className="w-full py-4 bg-toss-bg hover:bg-toss-border/30 text-toss-text-primary rounded-2xl text-[13px] font-bold transition-all active:scale-[0.98] cursor-pointer text-center"
                 >
                   닫기
