@@ -27,7 +27,7 @@ export default function ExpenseForm({
   const [currency, setCurrency] = useState('EUR');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [paymentMethod, setPaymentMethod] = useState('현금');
+  const [paymentMethod, setPaymentMethod] = useState('카드');
   const [customMethodInput, setCustomMethodInput] = useState('');
 
   // Sync state if editing
@@ -38,7 +38,7 @@ export default function ExpenseForm({
       setAmount(editItem.amount ? formatInputAmount(editItem.amount.toString()) : '');
       setCurrency(editItem.currency || 'EUR');
       setDescription(editItem.description || '');
-      setPaymentMethod(editItem.paymentMethod || '현금');
+      setPaymentMethod(editItem.paymentMethod || '카드');
       
       const itemDate = editItem.date?.seconds 
         ? new Date(editItem.date.seconds * 1000) 
@@ -51,7 +51,7 @@ export default function ExpenseForm({
       setAmount('');
       setCurrency('EUR');
       setDescription('');
-      setPaymentMethod('현금');
+      setPaymentMethod('카드');
       setDate(new Date().toISOString().split('T')[0]);
     }
   }, [editItem, isOpen]);

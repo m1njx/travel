@@ -5,7 +5,7 @@ import {
   ChevronRight, TrendingUp, AlertCircle, RefreshCw, Compass, ArrowRight,
   Plus, Edit2, Check, X, Plane,
   Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
-  Wind, Droplets
+  Wind, Droplets, Siren, Phone
 } from 'lucide-react';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
@@ -73,6 +73,105 @@ const DEFAULT_TIPS = [
   "⏰ 유레일패스나 미술관 패스 등은 첫 사용 개시일(Validation) 오전 일찍 시작해야 하루 치 기간을 온전히 절약할 수 있습니다."
 ];
 
+const EMERGENCY_CONTACTS = [
+  {
+    city: '런던',
+    country: '영국',
+    flag: '🇬🇧',
+    embassy: '주영 대사관',
+    tel: '+44-20-7227-5500',
+    emergency: '+44-78-7656-1098'
+  },
+  {
+    city: '파리',
+    country: '프랑스',
+    flag: '🇫🇷',
+    embassy: '주프랑스 대사관',
+    tel: '+33-1-4753-0101',
+    emergency: '+33-6-3249-3657'
+  },
+  {
+    city: '인터라켄',
+    country: '스위스',
+    flag: '🇨🇭',
+    embassy: '주스위스 대사관 (Bern)',
+    tel: '+41-31-356-2444',
+    emergency: '+41-79-225-2615'
+  },
+  {
+    city: '뮌헨',
+    country: '독일',
+    flag: '🇩🇪',
+    embassy: '주뮌헨 총영사관',
+    tel: '+49-89-533-300',
+    emergency: '+49-160-9596-1437'
+  },
+  {
+    city: '프라하',
+    country: '체코',
+    flag: '🇨🇿',
+    embassy: '주체코 대사관',
+    tel: '+420-234-008-700',
+    emergency: '+420-725-352-095'
+  },
+  {
+    city: '비엔나',
+    country: '오스트리아',
+    flag: '🇦🇹',
+    embassy: '주오스트리아 대사관',
+    tel: '+43-1-478-1030',
+    emergency: '+43-664-548-2366'
+  },
+  {
+    city: '부다페스트',
+    country: '헝가리',
+    flag: '🇭🇺',
+    embassy: '주헝가리 대사관',
+    tel: '+36-1-462-3080',
+    emergency: '+36-30-243-7577'
+  },
+  {
+    city: '베니스',
+    country: '이탈리아',
+    flag: '🇮🇹',
+    embassy: '주밀라노 총영사관',
+    tel: '+39-02-2900-8802',
+    emergency: '+39-331-939-1204'
+  },
+  {
+    city: '피렌체',
+    country: '이탈리아',
+    flag: '🇮🇹',
+    embassy: '주이탈리아 대사관 (로마)',
+    tel: '+39-06-802461',
+    emergency: '+39-335-214-884'
+  },
+  {
+    city: '로마',
+    country: '이탈리아',
+    flag: '🇮🇹',
+    embassy: '주이탈리아 대사관',
+    tel: '+39-06-802461',
+    emergency: '+39-335-214-884'
+  },
+  {
+    city: '바르셀로나',
+    country: '스페인',
+    flag: '🇪🇸',
+    embassy: '주바르셀로나 총영사관',
+    tel: '+34-93-487-3937',
+    emergency: '+34-607-282-883'
+  },
+  {
+    city: '공통',
+    country: '대한민국',
+    flag: '🇰🇷',
+    embassy: '외교부 영사콜센터 (24h)',
+    tel: '+82-2-3210-0404',
+    emergency: '+82-2-3210-0404'
+  }
+];
+
 export default function DashboardPage({ schedulesSync, checklistsSync, expensesSync, members, nickname, apiKey, onNavigateToSchedule }) {
   const schedules = schedulesSync?.items || [];
   const checklists = checklistsSync?.items || [];
@@ -122,9 +221,10 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState(String(totalBudget));
 
-  // Departure countdown (30 hours from 2026-06-23T23:29:26+09:00 -> 2026-06-25T05:30:00+09:00)
-  const DEPARTURE_TIME = new Date('2026-06-25T05:30:00+09:00').getTime();
+  // Departure countdown (2026-06-25T07:50:00+09:00)
+  const DEPARTURE_TIME = new Date('2026-06-25T07:50:00+09:00').getTime();
   const [timeLeft, setTimeLeft] = useState(DEPARTURE_TIME - Date.now());
+  const [isSosOpen, setIsSosOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -517,6 +617,15 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
         
         {/* Weather & Connectivity Info */}
         <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-center">
+          {/* Siren SOS Button */}
+          <button
+            onClick={() => setIsSosOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.8 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-[11px] sm:text-[12px] font-black shadow-md shadow-red-500/15 transition-all active:scale-95 cursor-pointer animate-pulse shrink-0"
+          >
+            <Siren className="w-4 h-4 text-white" />
+            <span>대사관 SOS 🚨</span>
+          </button>
+
           {/* Real-time Weather Badge */}
           {weatherLoading ? (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/70 backdrop-blur-md border border-toss-border/50 rounded-2xl shadow-sm text-toss-text-secondary text-[11px] font-semibold animate-pulse">
@@ -998,9 +1107,17 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
               ))}
             </div>
 
-            <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight mt-1.5">
-              안녕하세요, {nickname}님 👋
-            </h2>
+            <div className="flex justify-between items-center mt-1.5">
+              <h2 className="text-[23px] sm:text-[25px] font-extrabold tracking-tight">
+                안녕하세요, {nickname}님 👋
+              </h2>
+              <button
+                onClick={() => setIsSosOpen(true)}
+                className="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-2xl flex items-center justify-center shadow-md shadow-red-500/20 active:scale-90 transition-all cursor-pointer animate-pulse shrink-0"
+              >
+                <Siren className="w-5 h-5 text-white" />
+              </button>
+            </div>
           </div>
 
           {/* Quick Metrics 4-Column Grid */}
@@ -1573,6 +1690,111 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
         )}
       </AnimatePresence>
 
+      {/* SOS Embassy Contacts Popover Modal */}
+      <AnimatePresence>
+        {isSosOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/55 backdrop-blur-md"
+            onClick={() => setIsSosOpen(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="w-full max-w-md bg-white border border-toss-border/60 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col text-toss-text-primary"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-toss-border/50 pb-4 mb-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8.5 h-8.5 bg-red-50 rounded-xl flex items-center justify-center text-red-500 border border-red-100/50 animate-pulse">
+                    <Siren className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-[17px] font-extrabold tracking-tight">
+                      국가별 긴급 연락처 🚨
+                    </h3>
+                    <p className="text-[10.5px] text-toss-text-secondary mt-0.5 font-semibold">
+                      위급 상황 시 현지 한국 대사관/총영사관 연락처
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsSosOpen(false)}
+                  className="w-8 h-8 rounded-full bg-toss-bg hover:bg-toss-border/40 flex items-center justify-center text-toss-text-secondary transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Info Notice Banner */}
+              <div className="bg-red-50/50 border border-red-100/70 p-3.5 rounded-2xl flex items-start gap-2.5 mb-3 shrink-0">
+                <span className="text-[14px] leading-none shrink-0">💡</span>
+                <p className="text-[11px] font-bold text-red-700 leading-relaxed">
+                  전화번호 버튼을 누르면 즉시 전화 걸기 화면으로 연결됩니다. 여권 분실, 도난, 사고 등 위급 상황 시 신속하게 대처하세요.
+                </p>
+              </div>
+
+              {/* Contacts List */}
+              <div className="flex-1 overflow-y-auto space-y-3 py-1 pr-0.5 scrollbar-none">
+                {EMERGENCY_CONTACTS.map((contact, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`p-3.5 rounded-2xl border transition-all duration-200 ${
+                      contact.city === '공통'
+                        ? 'bg-toss-blue/5 border-toss-blue/20'
+                        : 'bg-white border-toss-border/70 hover:border-toss-border hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[16px] leading-none">{contact.flag}</span>
+                        <span className="text-[13px] font-extrabold text-toss-text-primary">
+                          {contact.city === '공통' ? '외교부 영사콜센터 (24h)' : `${contact.country} ${contact.city}`}
+                        </span>
+                      </div>
+                      <span className="text-[9.5px] font-bold text-toss-text-secondary px-2 py-0.8 bg-toss-bg rounded-lg border border-toss-border/30">
+                        {contact.embassy}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <a 
+                        href={`tel:${contact.tel.replace(/[^0-9+]/g, '')}`}
+                        className="flex items-center justify-center gap-1 py-2 px-2.5 bg-toss-bg hover:bg-toss-border/40 text-toss-text-primary rounded-xl text-[11px] font-bold transition-all text-center border border-toss-border/50 active:scale-95"
+                      >
+                        <Phone className="w-3 h-3 text-toss-text-secondary" />
+                        <span>대표: {contact.tel}</span>
+                      </a>
+                      <a 
+                        href={`tel:${contact.emergency.replace(/[^0-9+]/g, '')}`}
+                        className="flex items-center justify-center gap-1 py-2 px-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[11px] font-black transition-all text-center shadow-sm shadow-red-500/10 active:scale-95"
+                      >
+                        <Siren className="w-3 h-3 text-white" />
+                        <span>긴급: {contact.emergency}</span>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Close Button Footer */}
+              <div className="border-t border-toss-border/40 pt-4 mt-3 shrink-0">
+                <button
+                  onClick={() => setIsSosOpen(false)}
+                  className="w-full py-4 bg-toss-bg hover:bg-toss-border/30 text-toss-text-primary rounded-2xl text-[13px] font-bold transition-all active:scale-[0.98] cursor-pointer text-center"
+                >
+                  닫기
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </motion.div>
   );
