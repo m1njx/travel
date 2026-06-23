@@ -80,7 +80,7 @@ const EMERGENCY_CONTACTS = [
     flag: '🇬🇧',
     embassy: '주영 대사관',
     tel: '+44-20-7227-5500',
-    emergency: '+44-78-7656-1098'
+    emergency: '+44-78-7650-6895'
   },
   {
     city: '파리',
@@ -88,7 +88,7 @@ const EMERGENCY_CONTACTS = [
     flag: '🇫🇷',
     embassy: '주프랑스 대사관',
     tel: '+33-1-4753-0101',
-    emergency: '+33-6-3249-3657'
+    emergency: '+33-6-8028-5396'
   },
   {
     city: '인터라켄',
@@ -96,31 +96,31 @@ const EMERGENCY_CONTACTS = [
     flag: '🇨🇭',
     embassy: '주스위스 대사관 (Bern)',
     tel: '+41-31-356-2444',
-    emergency: '+41-79-225-2615'
+    emergency: '+41-79-897-4086'
   },
   {
     city: '뮌헨',
     country: '독일',
     flag: '🇩🇪',
-    embassy: '주뮌헨 총영사관',
-    tel: '+49-89-533-300',
-    emergency: '+49-160-9596-1437'
+    embassy: '주프랑크푸르트 총영사관',
+    tel: '+49-69-9567-520',
+    emergency: '+49-173-363-4854'
   },
   {
     city: '프라하',
     country: '체코',
     flag: '🇨🇿',
     embassy: '주체코 대사관',
-    tel: '+420-234-008-700',
-    emergency: '+420-725-352-095'
+    tel: '+420-234-090-411',
+    emergency: '+420-725-352-420'
   },
   {
     city: '비엔나',
     country: '오스트리아',
     flag: '🇦🇹',
     embassy: '주오스트리아 대사관',
-    tel: '+43-1-478-1030',
-    emergency: '+43-664-548-2366'
+    tel: '+43-1-478-1991',
+    emergency: '+43-664-527-0743'
   },
   {
     city: '부다페스트',
@@ -128,39 +128,39 @@ const EMERGENCY_CONTACTS = [
     flag: '🇭🇺',
     embassy: '주헝가리 대사관',
     tel: '+36-1-462-3080',
-    emergency: '+36-30-243-7577'
+    emergency: '+36-30-550-9922'
   },
   {
     city: '베니스',
     country: '이탈리아',
     flag: '🇮🇹',
     embassy: '주밀라노 총영사관',
-    tel: '+39-02-2900-8802',
-    emergency: '+39-331-939-1204'
+    tel: '+39-02-2906-2641',
+    emergency: '+39-331-9557-463'
   },
   {
     city: '피렌체',
     country: '이탈리아',
     flag: '🇮🇹',
     embassy: '주이탈리아 대사관 (로마)',
-    tel: '+39-06-802461',
-    emergency: '+39-335-214-884'
+    tel: '+39-06-420-402-1',
+    emergency: '+39-335-185-0499'
   },
   {
     city: '로마',
     country: '이탈리아',
     flag: '🇮🇹',
     embassy: '주이탈리아 대사관',
-    tel: '+39-06-802461',
-    emergency: '+39-335-214-884'
+    tel: '+39-06-420-402-1',
+    emergency: '+39-335-185-0499'
   },
   {
     city: '바르셀로나',
     country: '스페인',
     flag: '🇪🇸',
     embassy: '주바르셀로나 총영사관',
-    tel: '+34-93-487-3937',
-    emergency: '+34-607-282-883'
+    tel: '+34-93-487-3153',
+    emergency: '+34-696-146-176'
   },
   {
     city: '공통',
