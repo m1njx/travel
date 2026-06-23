@@ -11,6 +11,7 @@ import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 import { convertToKRW, formatKRW, fetchExchangeRates } from '../utils/exchangeRate';
 import { getAITravelTip } from '../utils/gemini';
 import SurvivalPhrases from '../components/SurvivalPhrases';
+import TravelHelperTools from '../components/TravelHelperTools';
 
 const WMO_WEATHER_MAP = {
   0: { label: '맑음', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -911,6 +912,11 @@ export default function DashboardPage({ schedulesSync, checklistsSync, expensesS
       {/* Survival Phrases Section - Full width */}
       <motion.div variants={itemVariants} className="w-full">
         <SurvivalPhrases />
+      </motion.div>
+
+      {/* Travel Utility & Helper Tools - Full width */}
+      <motion.div variants={itemVariants} className="w-full">
+        <TravelHelperTools />
       </motion.div>
 
       {/* Grid: Timeline and AI Recommendations */}
