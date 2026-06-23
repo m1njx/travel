@@ -55,8 +55,34 @@ const calculateSettlement = (expenses, members) => {
 
 export default function ExpensePage({ members, sync, apiKey, nickname, logAction }) {
   const { items: expenses, addItem, removeItem } = sync;
-  const [rates, setRates] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [rates, setRates] = useState(() => {
+    try {
+      const stored = localStorage.getItem('tripsync_exchange_rates');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Date.now() - parsed.lastUpdated < 10 * 60 * 1000) {
+          return parsed.rates;
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    return null;
+  });
+  const [lastUpdated, setLastUpdated] = useState(() => {
+    try {
+      const stored = localStorage.getItem('tripsync_exchange_rates');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Date.now() - parsed.lastUpdated < 10 * 60 * 1000) {
+          return parsed.lastUpdated;
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [selectedDateKey, setSelectedDateKey] = useState('all');
@@ -68,7 +94,28 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
   const loadRates = async (force = false) => {
     setLoading(true);
     try {
-      if ((force || !rates) && apiKey) {
+      const CACHE_DURATION = 10 * 60 * 1000;
+      let currentRates = rates;
+      let currentLastUpdated = lastUpdated;
+
+      if (!force) {
+        try {
+          const stored = localStorage.getItem('tripsync_exchange_rates');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Date.now() - parsed.lastUpdated < CACHE_DURATION) {
+              setRates(parsed.rates);
+              setLastUpdated(parsed.lastUpdated);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      if ((force || !currentRates || !currentLastUpdated || (Date.now() - currentLastUpdated >= CACHE_DURATION)) && apiKey) {
         // Use Gemini API Search Grounding for real-time rates
         const result = await getLiveRatesWithGemini(apiKey);
         setRates(result.rates);
