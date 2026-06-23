@@ -612,6 +612,14 @@ export default function ExpensePage({ members, sync, apiKey, nickname, logAction
 function getCategoryEmoji(c) { return { food:'🍽️', transport:'🚇', stay:'🏨', ticket:'🎫', shopping:'🛍️', etc:'📌' }[c] || '📌'; }
 function getCategoryLabel(c) { return { food:'식비', transport:'교통', stay:'숙소', ticket:'입장료', shopping:'쇼핑', etc:'기타' }[c] || '기타'; }
 
+const formatInputAmount = (val) => {
+  if (!val) return '';
+  const cleanVal = val.replace(/[^0-9.]/g, '');
+  const parts = cleanVal.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.slice(0, 2).join('.');
+};
+
 function AddExpenseModal({ members, onSave, onClose, rates, lastUpdated, apiKey }) {
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
@@ -634,7 +642,7 @@ function AddExpenseModal({ members, onSave, onClose, rates, lastUpdated, apiKey 
     { id:'shopping',label:'쇼핑',emoji:'🛍️' }, { id:'etc',label:'기타',emoji:'📌' },
   ];
   const toggle = (i) => setSplitWith(p => p.map((v,idx) => idx===i?!v:v));
-  const num = parseFloat(amount) || 0;
+  const num = parseFloat(amount.replace(/,/g, '')) || 0;
   const krw = rates ? convertToKRW(num, currency, rates) : 0;
   const splitCount = splitWith.filter(Boolean).length;
   const perPerson = splitCount > 0 ? Math.round(krw/splitCount) : 0;
@@ -677,7 +685,7 @@ function AddExpenseModal({ members, onSave, onClose, rates, lastUpdated, apiKey 
         try {
           const parsed = await scanReceiptWithGemini(base64Data, file.type, apiKey);
           setDesc(parsed.description);
-          setAmount(parsed.amount.toString());
+          setAmount(formatInputAmount(parsed.amount.toString()));
           setCurrency(parsed.currency);
           setCategory(parsed.category);
           setScanning(false);
@@ -796,7 +804,7 @@ function AddExpenseModal({ members, onSave, onClose, rates, lastUpdated, apiKey 
               className="w-full px-4 py-3 sm:py-3.5 bg-toss-bg rounded-2xl text-[15px]" autoFocus /></div>
           <div className="flex gap-2 sm:gap-3">
             <div className="flex-1"><label className="text-[13px] font-semibold text-toss-text-secondary mb-1.5 block">금액</label>
-              <input type="number" inputMode="decimal" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)}
+              <input type="text" inputMode="decimal" placeholder="0" value={amount} onChange={e=>setAmount(formatInputAmount(e.target.value))}
                 className="w-full px-4 py-3 sm:py-3.5 bg-toss-bg rounded-2xl text-[15px] tabular-nums" /></div>
             <div className="w-28 sm:w-32"><label className="text-[13px] font-semibold text-toss-text-secondary mb-1.5 block">통화</label>
               <select value={currency} onChange={e=>setCurrency(e.target.value)} className="w-full px-2 sm:px-3 py-3 bg-toss-bg rounded-2xl text-[14px] sm:text-[15px]">

@@ -1,12 +1,12 @@
 // Supported currencies for Europe Travel Expense Tracker
 export const EURO_CURRENCIES = {
+  KRW: { code: 'KRW', name: '원화', symbol: '₩', flag: '🇰🇷', defaultRate: 1 },
   EUR: { code: 'EUR', name: '유로', symbol: '€', flag: '🇫🇷', defaultRate: 1500 },
   GBP: { code: 'GBP', name: '파운드', symbol: '£', flag: '🇬🇧', defaultRate: 1800 },
   CHF: { code: 'CHF', name: '스위스 프랑', symbol: 'CHF', flag: '🇨🇭', defaultRate: 1600 },
   CZK: { code: 'CZK', name: '체코 코루나', symbol: 'Kč', flag: '🇨🇿', defaultRate: 60 },
   HUF: { code: 'HUF', name: '헝가리 포린트', symbol: 'Ft', flag: '🇭🇺', defaultRate: 3.8 },
   PLN: { code: 'PLN', name: '폴란드 즈로티', symbol: 'zł', flag: '🇵🇱', defaultRate: 350 },
-  KRW: { code: 'KRW', name: '원화', symbol: '₩', flag: '🇰🇷', defaultRate: 1 },
 };
 
 // Default rates for easy export

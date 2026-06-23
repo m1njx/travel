@@ -3,6 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Edit3, Plus, Landmark, FileText } from 'lucide-react';
 import { EURO_CURRENCIES, EURO_CATEGORIES, EURO_CITY_TEMPLATES } from '../../utils/euroCurrency';
 
+const formatInputAmount = (val) => {
+  if (!val) return '';
+  const cleanVal = val.replace(/[^0-9.]/g, '');
+  const parts = cleanVal.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.slice(0, 2).join('.');
+};
+
 export default function ExpenseForm({
   isOpen,
   onClose,
@@ -27,7 +35,7 @@ export default function ExpenseForm({
     if (editItem) {
       setCity(editItem.city || '');
       setCategory(editItem.category || 'food');
-      setAmount(editItem.amount ? editItem.amount.toString() : '');
+      setAmount(editItem.amount ? formatInputAmount(editItem.amount.toString()) : '');
       setCurrency(editItem.currency || 'EUR');
       setDescription(editItem.description || '');
       setPaymentMethod(editItem.paymentMethod || '현금');
@@ -58,7 +66,8 @@ export default function ExpenseForm({
       alert('지출 내역을 입력해 주세요.');
       return;
     }
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    const cleanAmount = amount.replace(/,/g, '');
+    if (!cleanAmount || isNaN(Number(cleanAmount)) || Number(cleanAmount) <= 0) {
       alert('올바른 지출 금액을 입력해 주세요.');
       return;
     }
@@ -81,7 +90,7 @@ export default function ExpenseForm({
       city: city.trim() || '미지정',
       country: countryVal,
       category,
-      amount: Number(amount),
+      amount: Number(cleanAmount),
       currency,
       description: description.trim(),
       date: new Date(date).toISOString(),
@@ -219,12 +228,11 @@ export default function ExpenseForm({
                     {EURO_CURRENCIES[currency]?.symbol || currency}
                   </span>
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
                     inputMode="decimal"
                     placeholder="0.00"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => setAmount(formatInputAmount(e.target.value))}
                     className="flex-1 bg-transparent text-xl font-extrabold text-toss-text-primary focus:outline-none border-none p-0 font-mono"
                     required
                   />
