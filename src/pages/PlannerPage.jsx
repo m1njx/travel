@@ -47,12 +47,10 @@ export default function PlannerPage({
 
     const originalDisplay = element.style.display;
     element.style.display = 'block';
-    element.style.position = 'fixed';
-    element.style.left = '0';
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
     element.style.top = '0';
     element.style.width = '794px';
-    element.style.zIndex = '-9999';
-    element.style.opacity = '0';
 
     try {
       await document.fonts.ready;
@@ -65,9 +63,8 @@ export default function PlannerPage({
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#FAFBFD',
         imageTimeout: 0,
-        removeContainer: false,
       });
 
       const imgData = canvas.toDataURL('image/png');
@@ -100,8 +97,6 @@ export default function PlannerPage({
       element.style.left = '';
       element.style.top = '';
       element.style.width = '';
-      element.style.zIndex = '';
-      element.style.opacity = '';
       setIsDownloading(false);
     }
   };
