@@ -44,68 +44,64 @@ export default function PlannerPage({
       setIsDownloading(false);
       return;
     }
-    
-    const originalDisplay = element.style.display;
-    const originalPosition = element.style.position;
-    const originalLeft = element.style.left;
-    const originalTop = element.style.top;
-    const originalWidth = element.style.width;
 
+    const originalDisplay = element.style.display;
     element.style.display = 'block';
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
+    element.style.position = 'fixed';
+    element.style.left = '0';
     element.style.top = '0';
-    element.style.width = '800px';
+    element.style.width = '794px';
+    element.style.zIndex = '-9999';
+    element.style.opacity = '0';
 
     try {
-      // Wait for Pretendard font to load
       await document.fonts.ready;
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(r => setTimeout(r, 500));
 
       const html2canvas = (await import('html2canvas-pro')).default;
       const { jsPDF } = await import('jspdf');
 
       const canvas = await html2canvas(element, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
         logging: false,
+        backgroundColor: '#ffffff',
+        imageTimeout: 0,
+        removeContainer: false,
       });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdfW = 210;
+      const pdfH = 297;
+      const imgW = pdfW;
+      const imgH = (canvas.height * imgW) / canvas.width;
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'in',
-        format: 'letter'
-      });
-      
-      const imgWidth = 8.5; 
-      const pageHeight = 11; 
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-      
-      // Add first page
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      // Multi-page logic
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      let heightLeft = imgH;
+      let pos = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, pos, imgW, imgH, undefined, 'FAST');
+      heightLeft -= pdfH;
+
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+        pos = heightLeft - imgH;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, 'PNG', 0, pos, imgW, imgH, undefined, 'FAST');
+        heightLeft -= pdfH;
       }
-      
-      pdf.save(`TripSync_Itinerary_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      pdf.save(`TripSync_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('PDF Download Error:', error);
       alert('PDF 다운로드 중 오류가 발생했습니다.');
     } finally {
       element.style.display = originalDisplay;
-      element.style.position = originalPosition;
-      element.style.left = originalLeft;
-      element.style.top = originalTop;
-      element.style.width = originalWidth;
+      element.style.position = '';
+      element.style.left = '';
+      element.style.top = '';
+      element.style.width = '';
+      element.style.zIndex = '';
+      element.style.opacity = '';
       setIsDownloading(false);
     }
   };
@@ -602,173 +598,203 @@ export default function PlannerPage({
         )}
       </AnimatePresence>
 
-      {/* PDF Export Portal — 100% inline styles for html2canvas compatibility */}
+      {/* PDF Export Portal — Magazine-style creative design */}
       {createPortal(
-        <div id="print-itinerary-area" style={{ display: 'none', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif", color: '#191F28', lineHeight: 1.6, WebkitFontSmoothing: 'antialiased' }}>
-          {/* Google Fonts Pretendard CDN */}
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+        <div id="print-itinerary-area" style={{
+          display: 'none',
+          fontFamily: "'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', sans-serif",
+          color: '#1B1D1F',
+          textRendering: 'geometricPrecision',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+        }}>
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
 
-          <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 44px', backgroundColor: '#FFFFFF' }}>
-            
-            {/* ── Cover Card ── */}
-            <div style={{ background: 'linear-gradient(135deg, #F0F4FF 0%, #F8F9FA 100%)', borderRadius: 24, padding: '36px 36px 28px', marginBottom: 36, position: 'relative', overflow: 'hidden', border: '1px solid #E8ECF0' }}>
-              {/* Decorative circles */}
-              <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(0,100,255,0.06)' }} />
-              <div style={{ position: 'absolute', right: 60, bottom: -30, width: 100, height: 100, borderRadius: '50%', background: 'rgba(0,100,255,0.04)' }} />
+          <div style={{ width: 794, margin: '0 auto', backgroundColor: '#FAFBFD' }}>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, position: 'relative', zIndex: 1 }}>
-                <div style={{ width: 52, height: 52, background: 'linear-gradient(135deg, #0064FF, #3B82F6)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 6px 20px rgba(0,100,255,0.25)' }}>
-                  ✈️
+            {/* ═══ HERO COVER ═══ */}
+            <div style={{ background: 'linear-gradient(160deg, #0052D4 0%, #4364F7 50%, #6FB1FC 100%)', padding: '48px 48px 40px', position: 'relative', overflow: 'hidden' }}>
+              {/* Floating geometric shapes */}
+              <div style={{ position: 'absolute', right: 40, top: -20, width: 120, height: 120, borderRadius: 24, background: 'rgba(255,255,255,0.08)', transform: 'rotate(15deg)' }} />
+              <div style={{ position: 'absolute', right: 120, top: 60, width: 60, height: 60, borderRadius: 16, background: 'rgba(255,255,255,0.06)', transform: 'rotate(-10deg)' }} />
+              <div style={{ position: 'absolute', left: -30, bottom: -30, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                {/* Logo area */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>✈️</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: 1 }}>TRIPSYNC</div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#0064FF', textTransform: 'uppercase', letterSpacing: 2.5, marginBottom: 2 }}>Travel Itinerary</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#191F28', letterSpacing: -0.5 }}>TripSync 유럽 여행 일정표</div>
+
+                {/* Main title */}
+                <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1.3, letterSpacing: -1, marginBottom: 8 }}>
+                  유럽 여행 일정표
                 </div>
-              </div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, marginBottom: 32 }}>
+                  실시간 동기화로 작성된 여행 플랜
+                </div>
 
-              <p style={{ fontSize: 13, color: '#6B7684', lineHeight: 1.8, marginBottom: 24, position: 'relative', zIndex: 1 }}>
-                팀원들과 함께 실시간으로 동기화하여 작성한 소중한 여행 일정표입니다.<br/>시간별 동선과 세부 장소 정보를 담고 있습니다. 즐겁고 안전한 여행이 되기를 바랍니다.
-              </p>
-
-              <div style={{ borderTop: '1px solid #DDE1E6', paddingTop: 18, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8B95A1', position: 'relative', zIndex: 1 }}>
-                <span>출력 회원: <strong style={{ color: '#4E5968' }}>{nickname}</strong></span>
-                <span>다운로드: <strong style={{ color: '#4E5968' }}>{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })} {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</strong></span>
+                {/* Info pills */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '6px 14px', fontSize: 11, fontWeight: 600, color: '#fff' }}>
+                    👤 {nickname}
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '6px 14px', fontSize: 11, fontWeight: 600, color: '#fff' }}>
+                    📅 {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '6px 14px', fontSize: 11, fontWeight: 600, color: '#fff' }}>
+                    📍 {totalP}곳
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* ── Summary Dashboard ── */}
-            <div style={{ display: 'flex', gap: 0, marginBottom: 36, border: '1px solid #E8ECF0', borderRadius: 20, overflow: 'hidden', background: '#fff' }}>
+            {/* ═══ STATS ROW ═══ */}
+            <div style={{ display: 'flex', backgroundColor: '#fff', borderBottom: '1px solid #ECEEF1' }}>
               {[
-                { label: '총 일정', value: `${sortedDates.filter(d => d !== '날짜 미정').length}일`, color: '#191F28' },
-                { label: '등록 일정', value: `${schedules.length}개`, color: '#191F28' },
-                { label: '총 방문지', value: `${totalP}곳`, sub: `${doneP} 완료`, color: '#0064FF' },
-              ].map((item, i) => (
-                <div key={i} style={{ flex: 1, textAlign: 'center', padding: '22px 16px', borderRight: i < 2 ? '1px solid #F2F4F6' : 'none' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8B95A1', marginBottom: 6, letterSpacing: 0.3 }}>{item.label}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: item.color, letterSpacing: -0.5 }}>{item.value}</div>
-                  {item.sub && <div style={{ fontSize: 10, fontWeight: 600, color: '#B0B8C1', marginTop: 2 }}>{item.sub}</div>}
+                { emoji: '📆', label: '여행 기간', value: `${sortedDates.filter(d => d !== '날짜 미정').length}일` },
+                { emoji: '📋', label: '등록된 일정', value: `${schedules.length}개` },
+                { emoji: '✅', label: '방문 완료', value: `${doneP}/${totalP}`, accent: true },
+              ].map((s, i) => (
+                <div key={i} style={{ flex: 1, padding: '20px 24px', borderRight: i < 2 ? '1px solid #ECEEF1' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 20 }}>{s.emoji}</div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#8B95A1', lineHeight: 1, marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: s.accent ? '#0064FF' : '#1B1D1F', lineHeight: 1, letterSpacing: -1 }}>{s.value}</div>
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* ── Day-by-Day Timeline ── */}
-            {sortedDates.map((dateStr) => {
-              const dayLabel = getDayNumber(dateStr);
-              const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
+            {/* ═══ PROGRESS BAR ═══ */}
+            {totalP > 0 && (
+              <div style={{ backgroundColor: '#fff', padding: '16px 48px 20px', borderBottom: '1px solid #ECEEF1' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#4E5968' }}>여행 진행률</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#0064FF' }}>{Math.round((doneP / totalP) * 100)}%</div>
+                </div>
+                <div style={{ height: 6, backgroundColor: '#F2F4F6', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${(doneP / totalP) * 100}%`, background: 'linear-gradient(90deg, #0064FF, #6FB1FC)', borderRadius: 3 }} />
+                </div>
+              </div>
+            )}
 
-              return (
-                <div key={dateStr} style={{ border: '1px solid #E8ECF0', borderRadius: 20, padding: '28px 28px 20px', marginBottom: 28, backgroundColor: '#fff', pageBreakInside: 'avoid' }}>
-                  {/* Day Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #F2F4F6', paddingBottom: 16, marginBottom: 20 }}>
-                    {dayLabel && (
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #0064FF, #3B82F6)', padding: '4px 12px', borderRadius: 8, letterSpacing: 0.5 }}>
-                        {dayLabel}
-                      </span>
-                    )}
-                    <span style={{ fontSize: 16, fontWeight: 800, color: '#191F28' }}>
-                      {formatDateLabel(dateStr)}
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#8B95A1', marginLeft: 'auto' }}>
-                      일정 {daySchedules.length}개
-                    </span>
-                  </div>
+            {/* ═══ DAILY ITINERARY ═══ */}
+            <div style={{ padding: '32px 48px 24px' }}>
+              {sortedDates.map((dateStr, dayIdx) => {
+                const dayLabel = getDayNumber(dateStr);
+                const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
+                const colors = ['#0064FF', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#4F46E5', '#CA8A04'];
+                const accentColor = colors[dayIdx % colors.length];
 
-                  {/* Schedule items with timeline */}
-                  {daySchedules.map((schedule, idx) => {
-                    const sortedPls = [...(schedule.places || [])].sort((a, b) => {
-                      const dateA = a.date || schedule.date;
-                      const dateB = b.date || schedule.date;
-                      if (dateA !== dateB) return dateA.localeCompare(dateB);
-                      if (!a.time && !b.time) return 0;
-                      if (!a.time) return 1;
-                      if (!b.time) return -1;
-                      return a.time.localeCompare(b.time);
-                    });
-                    const isLast = idx === daySchedules.length - 1;
+                return (
+                  <div key={dateStr} style={{ marginBottom: 28, pageBreakInside: 'avoid' }}>
+                    {/* Day header with colored accent */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                      {dayLabel && (
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', flexShrink: 0 }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)', lineHeight: 1, marginBottom: 1 }}>DAY</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{dayLabel.replace('DAY ', '')}</div>
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#1B1D1F', lineHeight: 1.3 }}>{formatDateLabel(dateStr)}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#8B95A1', lineHeight: 1, marginTop: 4 }}>일정 {daySchedules.length}개</div>
+                      </div>
+                    </div>
 
-                    return (
-                      <div key={schedule.id} style={{ position: 'relative', paddingLeft: 28, paddingBottom: isLast ? 4 : 28, borderLeft: isLast ? '2px solid transparent' : '2px solid #E8ECF0', marginLeft: 6 }}>
-                        {/* Timeline dot */}
-                        <div style={{ position: 'absolute', left: -7, top: 5, width: 12, height: 12, borderRadius: '50%', background: '#0064FF', border: '3px solid #fff', boxShadow: '0 0 0 3px rgba(0,100,255,0.12)' }} />
+                    {/* Schedule cards */}
+                    <div style={{ borderLeft: `3px solid ${accentColor}`, marginLeft: 20, paddingLeft: 24 }}>
+                      {daySchedules.map((schedule, idx) => {
+                        const sortedPls = [...(schedule.places || [])].sort((a, b) => {
+                          const dateA = a.date || schedule.date;
+                          const dateB = b.date || schedule.date;
+                          if (dateA !== dateB) return dateA.localeCompare(dateB);
+                          if (!a.time && !b.time) return 0;
+                          if (!a.time) return 1;
+                          if (!b.time) return -1;
+                          return a.time.localeCompare(b.time);
+                        });
 
-                        {/* Schedule title row */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: 15, fontWeight: 800, color: '#191F28' }}>{schedule.title}</span>
-                              {schedule.completed && (
-                                <span style={{ fontSize: 9, fontWeight: 800, color: '#0064FF', backgroundColor: '#E8F0FE', padding: '2px 8px', borderRadius: 6 }}>방문 완료</span>
+                        return (
+                          <div key={schedule.id} style={{ backgroundColor: '#fff', borderRadius: 14, padding: '18px 20px', marginBottom: 12, border: '1px solid #ECEEF1', position: 'relative' }}>
+                            {/* Step number circle */}
+                            <div style={{ position: 'absolute', left: -38, top: 18, width: 20, height: 20, borderRadius: '50%', backgroundColor: '#fff', border: `2px solid ${accentColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ fontSize: 9, fontWeight: 800, color: accentColor, lineHeight: 1 }}>{idx + 1}</span>
+                            </div>
+
+                            {/* Title row */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: schedule.memo || sortedPls.length > 0 ? 12 : 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#1B1D1F', lineHeight: 1.4 }}>{schedule.title}</div>
+                                {schedule.completed && (
+                                  <div style={{ fontSize: 9, fontWeight: 700, color: '#059669', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: 4 }}>완료</div>
+                                )}
+                              </div>
+                              {schedule.time && (
+                                <div style={{ fontSize: 11, fontWeight: 700, color: accentColor, backgroundColor: `${accentColor}12`, padding: '4px 10px', borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  {schedule.time}
+                                </div>
                               )}
                             </div>
-                          </div>
-                          {schedule.time && (
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#0064FF', backgroundColor: '#E8F0FE', padding: '4px 10px', borderRadius: 8, fontFamily: "'SF Mono', 'Fira Code', monospace", whiteSpace: 'nowrap', flexShrink: 0 }}>
-                              {schedule.time}
-                            </span>
-                          )}
-                        </div>
 
-                        {/* Memo */}
-                        {schedule.memo && (
-                          <div style={{ fontSize: 12, color: '#4E5968', marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.8, backgroundColor: '#F8F9FB', border: '1px solid #EEF1F4', padding: '14px 16px', borderRadius: 14 }}>
-                            {schedule.memo}
-                          </div>
-                        )}
-
-                        {/* Sub-places */}
-                        {sortedPls.length > 0 && (
-                          <div style={{ marginTop: 14, border: '1px solid #EEF1F4', borderRadius: 16, overflow: 'hidden', backgroundColor: '#FAFBFC' }}>
-                            {/* Sub header */}
-                            <div style={{ fontSize: 10, fontWeight: 700, color: '#8B95A1', padding: '10px 16px', borderBottom: '1px solid #F2F4F6', letterSpacing: 1, textTransform: 'uppercase' }}>
-                              세부 방문지 ({sortedPls.length})
-                            </div>
-                            {/* Place rows */}
-                            {sortedPls.map((pl, pIdx) => (
-                              <div key={pl.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: pIdx < sortedPls.length - 1 ? '1px solid #F2F4F6' : 'none', backgroundColor: pl.completed ? '#FBFCFD' : '#fff' }}>
-                                {/* Checkbox */}
-                                <div style={{ marginTop: 2, flexShrink: 0 }}>
-                                  {pl.completed ? (
-                                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg, #0064FF, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,100,255,0.2)' }}>
-                                      <span style={{ color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1 }}>✓</span>
-                                    </div>
-                                  ) : (
-                                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid #D1D6DB', backgroundColor: '#fff' }} />
-                                  )}
-                                </div>
-                                {/* Place detail */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: pl.completed ? '#B0B8C1' : '#191F28', textDecoration: pl.completed ? 'line-through' : 'none' }}>
-                                      {pl.name}
-                                    </span>
-                                    {pl.time && (
-                                      <span style={{ fontSize: 9, fontWeight: 700, color: '#0064FF', backgroundColor: '#E8F0FE', padding: '1px 7px', borderRadius: 4, fontFamily: "'SF Mono', 'Fira Code', monospace" }}>
-                                        {pl.time}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {pl.memo && (
-                                    <p style={{ fontSize: 11, color: '#6B7684', marginTop: 4, whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
-                                      {pl.memo}
-                                    </p>
-                                  )}
-                                </div>
+                            {/* Memo */}
+                            {schedule.memo && (
+                              <div style={{ fontSize: 12, color: '#4E5968', lineHeight: 1.7, backgroundColor: '#F8F9FB', padding: '12px 14px', borderRadius: 10, marginBottom: sortedPls.length > 0 ? 12 : 0, whiteSpace: 'pre-wrap', borderLeft: `3px solid ${accentColor}22` }}>
+                                {schedule.memo}
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
+                            )}
 
-            {/* ── Footer ── */}
-            <div style={{ textAlign: 'center', paddingTop: 24, borderTop: '1px solid #F2F4F6', marginTop: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#B0B8C1', letterSpacing: 0.3 }}>TripSync · 유럽 여행을 동기화하다</div>
-              <div style={{ fontSize: 10, color: '#D1D6DB', marginTop: 4 }}>이 문서는 TripSync 앱에서 자동 생성되었습니다</div>
+                            {/* Sub-places */}
+                            {sortedPls.length > 0 && (
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#8B95A1', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <span>📍</span> 세부 방문지
+                                </div>
+                                {sortedPls.map((pl, pIdx) => (
+                                  <div key={pl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: pIdx > 0 ? '1px solid #F4F5F7' : 'none' }}>
+                                    {/* Status dot */}
+                                    <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: pl.completed ? '#059669' : '#D1D6DB', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: 12, fontWeight: 600, color: pl.completed ? '#8B95A1' : '#1B1D1F', textDecoration: pl.completed ? 'line-through' : 'none', lineHeight: 1.4 }}>
+                                        {pl.name}
+                                      </span>
+                                      {pl.time && (
+                                        <span style={{ fontSize: 9, fontWeight: 600, color: '#6B7684', backgroundColor: '#F2F4F6', padding: '1px 6px', borderRadius: 3 }}>{pl.time}</span>
+                                      )}
+                                    </div>
+                                    {pl.completed && <span style={{ fontSize: 10 }}>✓</span>}
+                                  </div>
+                                ))}
+                                {/* Places with memos */}
+                                {sortedPls.filter(pl => pl.memo).map(pl => (
+                                  <div key={`memo-${pl.id}`} style={{ fontSize: 11, color: '#6B7684', lineHeight: 1.6, paddingLeft: 16, marginTop: 2, marginBottom: 4, whiteSpace: 'pre-wrap' }}>
+                                    💬 {pl.name}: {pl.memo}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+
+            {/* ═══ FOOTER ═══ */}
+            <div style={{ padding: '20px 48px 28px', borderTop: '1px solid #ECEEF1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#4E5968' }}>TripSync</div>
+                <div style={{ fontSize: 10, color: '#8B95A1', marginTop: 2 }}>여행을 동기화하다</div>
+              </div>
+              <div style={{ fontSize: 9, color: '#B0B8C1', textAlign: 'right' }}>
+                <div>Generated by TripSync App</div>
+                <div style={{ marginTop: 2 }}>{new Date().toLocaleDateString('ko-KR')} {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+            </div>
+
           </div>
         </div>,
         document.body
