@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, ChevronDown, ChevronUp, Calendar, Trash2, Edit3, CheckCircle2, Circle, Link2, ExternalLink, Compass, Sparkles, Map, List, AlertCircle } from 'lucide-react';
+import { Plus, X, ChevronDown, ChevronUp, Calendar, Trash2, Edit3, CheckCircle2, Circle, Link2, ExternalLink, Compass, Sparkles, Map, List, AlertCircle, Download, Loader } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import TravelMap from '../components/TravelMap';
 import { optimizeScheduleWithGemini } from '../utils/gemini';
 
@@ -33,6 +34,57 @@ export default function PlannerPage({
   const { items: schedules, addItem, updateItem, removeItem } = sync;
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    const element = document.getElementById('print-itinerary-area');
+    if (!element) {
+      setIsDownloading(false);
+      return;
+    }
+    
+    const originalDisplay = element.style.display;
+    const originalPosition = element.style.position;
+    const originalLeft = element.style.left;
+    const originalTop = element.style.top;
+    const originalWidth = element.style.width;
+
+    element.style.display = 'block';
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
+    element.style.top = '0';
+    element.style.width = '800px';
+
+    const opt = {
+      margin:       [0.5, 0.5],
+      filename:     `TripSync_Itinerary_${new Date().toISOString().split('T')[0]}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true,
+        logging: false,
+        letterRendering: true
+      },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+      const html2pdf = (await import('html2pdf.js/dist/html2pdf.min.js')).default;
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('PDF Download Error:', error);
+      alert('PDF 다운로드 중 오류가 발생했습니다.');
+    } finally {
+      element.style.display = originalDisplay;
+      element.style.position = originalPosition;
+      element.style.left = originalLeft;
+      element.style.top = originalTop;
+      element.style.width = originalWidth;
+      setIsDownloading(false);
+    }
+  };
 
   const updatePlacesList = async (sid, newPlaces) => {
     const s = schedules.find(x => x.id === sid);
@@ -247,10 +299,25 @@ export default function PlannerPage({
             <h1 className="text-[24px] sm:text-[26px] md:text-[28px] font-bold text-toss-text-primary tracking-tight">여행 일정</h1>
             <p className="text-[13px] sm:text-[14px] text-toss-text-secondary mt-1">일자별 일정을 한눈에 관리해보세요 🗓️</p>
           </div>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-toss-blue text-white rounded-xl text-[14px] font-semibold shadow-sm hover:bg-toss-blue-dark">
-            <Plus className="w-4 h-4" /> 일정 추가
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <motion.button 
+              whileTap={{ scale: 0.95 }} 
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-toss-border text-toss-text-primary rounded-xl text-[14px] font-semibold shadow-sm hover:bg-toss-bg/50 disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <Loader className="w-4 h-4 text-toss-text-secondary animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 text-toss-text-secondary" />
+              )}
+              <span>{isDownloading ? '다운로드 중...' : 'PDF 다운로드'}</span>
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAdd(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-toss-blue text-white rounded-xl text-[14px] font-semibold shadow-sm hover:bg-toss-blue-dark">
+              <Plus className="w-4 h-4" /> 일정 추가
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Progress Bar */}
@@ -386,6 +453,21 @@ export default function PlannerPage({
               <span className="text-[14px] font-extrabold tracking-tight pt-1 leading-none">{rate}%</span>
             </div>
           </div>
+
+          {/* PDF Download Button for Mobile */}
+          <motion.button 
+            whileTap={{ scale: 0.97 }} 
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="relative z-10 w-full flex items-center justify-center gap-2 py-3 bg-white/20 hover:bg-white/25 border border-white/20 text-white font-bold rounded-2xl text-[13.5px] backdrop-blur-md shadow-md mt-1 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {isDownloading ? (
+              <Loader className="w-4 h-4 text-white animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 text-white" />
+            )}
+            <span>{isDownloading ? 'PDF 다운로드 준비 중...' : '전체 일정 PDF 다운로드'}</span>
+          </motion.button>
         </div>
 
         {/* Mobile Visit Progress Bar */}
@@ -495,6 +577,152 @@ export default function PlannerPage({
           />
         )}
       </AnimatePresence>
+
+      {/* PDF Export Portal */}
+      {createPortal(
+        <div id="print-itinerary-area" style={{ display: 'none' }} className="bg-white text-[#191F28] p-8 max-w-4xl mx-auto font-sans leading-relaxed">
+          <style>{`
+            .print-card {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .print-divider {
+              border-bottom: 1px dashed #E5E8EB;
+            }
+          `}</style>
+          
+          {/* Header Banner */}
+          <div className="border-b-4 border-toss-blue pb-6 mb-8 flex justify-between items-end">
+            <div>
+              <h1 className="text-3xl font-extrabold text-toss-blue tracking-tight">✈️ TripSync 여행 일정표</h1>
+              <p className="text-sm text-toss-text-secondary mt-1.5">팀원들과 함께 계획한 유럽 여행 일정의 상세 내역입니다.</p>
+            </div>
+            <div className="text-right text-xs text-toss-text-secondary font-medium leading-5">
+              <p>출력 회원: <span className="font-semibold text-toss-text-primary">{nickname}</span></p>
+              <p>다운로드 일시: {new Date().toLocaleString('ko-KR')}</p>
+            </div>
+          </div>
+          
+          {/* Quick Summary Grid */}
+          <div className="grid grid-cols-3 gap-4 p-5 bg-toss-bg/50 rounded-2xl border border-toss-border/60 mb-8 text-center text-sm">
+            <div>
+              <p className="text-toss-text-secondary font-semibold mb-1">총 일정 일수</p>
+              <p className="text-xl font-extrabold text-toss-text-primary">{sortedDates.filter(d => d !== '날짜 미정').length}일</p>
+            </div>
+            <div>
+              <p className="text-toss-text-secondary font-semibold mb-1">등록 일정 개수</p>
+              <p className="text-xl font-extrabold text-toss-text-primary">{schedules.length}개</p>
+            </div>
+            <div>
+              <p className="text-toss-text-secondary font-semibold mb-1">총 방문 예정지</p>
+              <p className="text-xl font-extrabold text-toss-text-primary">{totalP}곳 ({doneP}곳 완료)</p>
+            </div>
+          </div>
+
+          {/* Timeline Section */}
+          <div className="space-y-8">
+            {sortedDates.map((dateStr) => {
+              const dayLabel = getDayNumber(dateStr);
+              const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
+              
+              return (
+                <div key={dateStr} className="print-card border border-toss-border/70 rounded-2xl p-6 bg-white shadow-sm space-y-4">
+                  {/* Day Date Title */}
+                  <div className="flex items-center gap-3 border-b border-toss-border pb-3">
+                    {dayLabel && (
+                      <span className="text-xs font-extrabold bg-toss-blue text-white px-2.5 py-1 rounded-lg">
+                        {dayLabel}
+                      </span>
+                    )}
+                    <h2 className="text-lg font-bold text-toss-text-primary">
+                      {formatDateLabel(dateStr)}
+                    </h2>
+                    <span className="text-xs text-toss-text-secondary font-bold ml-auto">
+                      일정 {daySchedules.length}개
+                    </span>
+                  </div>
+                  
+                  {/* Schedules in this Day */}
+                  <div className="space-y-6">
+                    {daySchedules.map((schedule, idx) => {
+                      const sortedPls = [...(schedule.places || [])].sort((a, b) => {
+                        const dateA = a.date || schedule.date;
+                        const dateB = b.date || schedule.date;
+                        if (dateA !== dateB) return dateA.localeCompare(dateB);
+                        if (!a.time && !b.time) return 0;
+                        if (!a.time) return 1;
+                        if (!b.time) return -1;
+                        return a.time.localeCompare(b.time);
+                      });
+
+                      return (
+                        <div key={schedule.id} className="relative pl-6 border-l-2 border-toss-blue/15 last:border-l-0 pb-1">
+                          {/* Timeline dot */}
+                          <div className="absolute left-[-6px] top-[6px] w-2.5 h-2.5 rounded-full bg-toss-blue border-2 border-white" />
+                          
+                          <div className="flex items-baseline justify-between flex-wrap gap-2">
+                            <h3 className="text-base font-bold text-toss-text-primary flex items-center gap-2">
+                              {schedule.title}
+                              {schedule.completed && (
+                                <span className="text-[10px] bg-green-50 text-toss-success font-extrabold px-1.5 py-0.5 rounded">
+                                  완료
+                                </span>
+                              )}
+                            </h3>
+                            {schedule.time && (
+                              <span className="text-xs font-semibold text-toss-blue font-mono bg-toss-blue-light px-2.5 py-0.5 rounded">
+                                {schedule.time}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {schedule.memo && (
+                            <p className="text-xs text-toss-text-secondary mt-1.5 whitespace-pre-wrap leading-relaxed">
+                              {schedule.memo}
+                            </p>
+                          )}
+                          
+                          {/* Places checklist inside this schedule */}
+                          {sortedPls.length > 0 && (
+                            <div className="mt-3.5 bg-toss-bg/30 border border-toss-border/40 rounded-xl p-4 space-y-2.5">
+                              <p className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">세부 방문지 ({sortedPls.length})</p>
+                              {sortedPls.map((pl) => (
+                                <div key={pl.id} className="text-xs flex items-start gap-2.5 border-b border-toss-border/20 last:border-0 pb-2.5 last:pb-0">
+                                  <span className="text-xs font-semibold text-toss-blue mt-0.5">
+                                    {pl.completed ? '☑' : '☐'}
+                                  </span>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className={`font-bold ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
+                                        {pl.name}
+                                      </span>
+                                      {pl.time && (
+                                        <span className="text-[9.5px] text-toss-blue font-semibold font-mono bg-toss-blue-light/60 px-1.5 py-0.2 rounded">
+                                          {pl.time}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {pl.memo && (
+                                      <p className="text-[11px] text-toss-text-secondary mt-0.5 whitespace-pre-wrap leading-relaxed">
+                                        {pl.memo}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
