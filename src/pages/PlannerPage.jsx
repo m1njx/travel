@@ -57,22 +57,42 @@ export default function PlannerPage({
     element.style.top = '0';
     element.style.width = '800px';
 
-    const opt = {
-      margin:       [0.5, 0.5],
-      filename:     `TripSync_Itinerary_${new Date().toISOString().split('T')[0]}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { 
-        scale: 2, 
+    try {
+      const html2canvas = (await import('html2canvas-pro')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
         useCORS: true,
         logging: false,
-        letterRendering: true
-      },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    try {
-      const html2pdf = (await import('html2pdf.js/dist/html2pdf.min.js')).default;
-      await html2pdf().set(opt).from(element).save();
+      });
+      
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'in',
+        format: 'letter'
+      });
+      
+      const imgWidth = 8.5; 
+      const pageHeight = 11; 
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      // Add first page
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      // Multi-page logic
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`TripSync_Itinerary_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('PDF Download Error:', error);
       alert('PDF 다운로드 중 오류가 발생했습니다.');
