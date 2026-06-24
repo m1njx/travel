@@ -58,11 +58,15 @@ export default function PlannerPage({
     element.style.width = '800px';
 
     try {
+      // Wait for Pretendard font to load
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       const html2canvas = (await import('html2canvas-pro')).default;
       const { jsPDF } = await import('jspdf');
 
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
       });
@@ -598,177 +602,173 @@ export default function PlannerPage({
         )}
       </AnimatePresence>
 
-      {/* PDF Export Portal */}
+      {/* PDF Export Portal — 100% inline styles for html2canvas compatibility */}
       {createPortal(
-        <div id="print-itinerary-area" style={{ display: 'none' }} className="bg-white text-[#191F28] p-10 max-w-4xl mx-auto font-sans leading-relaxed">
-          <style>{`
-            .print-card {
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
-            .print-divider {
-              border-bottom: 1px dashed #E5E8EB;
-            }
-          `}</style>
-          
-          {/* Toss Cover Card */}
-          <div className="bg-[#F8F9FA] border border-[#E5E8EB] rounded-3xl p-8 mb-8 relative overflow-hidden">
-            <div className="absolute right-[-40px] top-[-40px] w-56 h-56 rounded-full bg-[#0064FF]/5 pointer-events-none" />
-            
-            <div className="flex items-center gap-3.5 mb-5 relative z-10">
-              <div className="w-12 h-12 bg-[#0064FF] rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-[#0064FF]/10">
-                ✈️
-              </div>
-              <div>
-                <span className="text-[11px] font-bold text-[#0064FF] uppercase tracking-wider block">Travel Itinerary</span>
-                <h1 className="text-2xl font-extrabold text-[#191F28] tracking-tight mt-0.5">TripSync 유럽 여행 일정표</h1>
-              </div>
-            </div>
-            
-            <p className="text-[13.5px] text-[#4E5968] leading-relaxed mb-6 relative z-10">
-              팀원들과 함께 실시간으로 동기화하여 작성한 소중한 여행 일정표입니다. 시간별 동선과 세부 장소 정보를 담고 있습니다. 즐겁고 안전한 여행이 되기를 바랍니다.
-            </p>
-            
-            <div className="flex justify-between items-center border-t border-[#E5E8EB] pt-5 text-[12px] text-[#8B95A1] relative z-10">
-              <div>
-                <span>출력 회원: </span>
-                <span className="font-semibold text-[#4E5968]">{nickname}</span>
-              </div>
-              <div>
-                <span>다운로드 일시: </span>
-                <span className="font-semibold text-[#4E5968]">
-                  {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })} {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Quick Summary Grid */}
-          <div className="grid grid-cols-3 gap-6 p-6 bg-white border border-[#E5E8EB] rounded-3xl mb-8 text-center shadow-sm">
-            <div className="border-r border-[#E5E8EB]/80 last:border-r-0">
-              <p className="text-[12px] font-bold text-[#8B95A1] mb-1.5">총 일정</p>
-              <p className="text-xl font-extrabold text-[#191F28]">{sortedDates.filter(d => d !== '날짜 미정').length}일</p>
-            </div>
-            <div className="border-r border-[#E5E8EB]/80 last:border-r-0">
-              <p className="text-[12px] font-bold text-[#8B95A1] mb-1.5">등록 일정</p>
-              <p className="text-xl font-extrabold text-[#191F28]">{schedules.length}개</p>
-            </div>
-            <div>
-              <p className="text-[12px] font-bold text-[#8B95A1] mb-1.5">총 방문지</p>
-              <p className="text-xl font-extrabold text-[#0064FF]">{totalP}곳 <span className="text-[12px] font-semibold text-[#8B95A1]">({doneP} 완료)</span></p>
-            </div>
-          </div>
+        <div id="print-itinerary-area" style={{ display: 'none', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif", color: '#191F28', lineHeight: 1.6, WebkitFontSmoothing: 'antialiased' }}>
+          {/* Google Fonts Pretendard CDN */}
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
-          {/* Timeline Section */}
-          <div className="space-y-8">
+          <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 44px', backgroundColor: '#FFFFFF' }}>
+            
+            {/* ── Cover Card ── */}
+            <div style={{ background: 'linear-gradient(135deg, #F0F4FF 0%, #F8F9FA 100%)', borderRadius: 24, padding: '36px 36px 28px', marginBottom: 36, position: 'relative', overflow: 'hidden', border: '1px solid #E8ECF0' }}>
+              {/* Decorative circles */}
+              <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(0,100,255,0.06)' }} />
+              <div style={{ position: 'absolute', right: 60, bottom: -30, width: 100, height: 100, borderRadius: '50%', background: 'rgba(0,100,255,0.04)' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, position: 'relative', zIndex: 1 }}>
+                <div style={{ width: 52, height: 52, background: 'linear-gradient(135deg, #0064FF, #3B82F6)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 6px 20px rgba(0,100,255,0.25)' }}>
+                  ✈️
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#0064FF', textTransform: 'uppercase', letterSpacing: 2.5, marginBottom: 2 }}>Travel Itinerary</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#191F28', letterSpacing: -0.5 }}>TripSync 유럽 여행 일정표</div>
+                </div>
+              </div>
+
+              <p style={{ fontSize: 13, color: '#6B7684', lineHeight: 1.8, marginBottom: 24, position: 'relative', zIndex: 1 }}>
+                팀원들과 함께 실시간으로 동기화하여 작성한 소중한 여행 일정표입니다.<br/>시간별 동선과 세부 장소 정보를 담고 있습니다. 즐겁고 안전한 여행이 되기를 바랍니다.
+              </p>
+
+              <div style={{ borderTop: '1px solid #DDE1E6', paddingTop: 18, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8B95A1', position: 'relative', zIndex: 1 }}>
+                <span>출력 회원: <strong style={{ color: '#4E5968' }}>{nickname}</strong></span>
+                <span>다운로드: <strong style={{ color: '#4E5968' }}>{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })} {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</strong></span>
+              </div>
+            </div>
+
+            {/* ── Summary Dashboard ── */}
+            <div style={{ display: 'flex', gap: 0, marginBottom: 36, border: '1px solid #E8ECF0', borderRadius: 20, overflow: 'hidden', background: '#fff' }}>
+              {[
+                { label: '총 일정', value: `${sortedDates.filter(d => d !== '날짜 미정').length}일`, color: '#191F28' },
+                { label: '등록 일정', value: `${schedules.length}개`, color: '#191F28' },
+                { label: '총 방문지', value: `${totalP}곳`, sub: `${doneP} 완료`, color: '#0064FF' },
+              ].map((item, i) => (
+                <div key={i} style={{ flex: 1, textAlign: 'center', padding: '22px 16px', borderRight: i < 2 ? '1px solid #F2F4F6' : 'none' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8B95A1', marginBottom: 6, letterSpacing: 0.3 }}>{item.label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: item.color, letterSpacing: -0.5 }}>{item.value}</div>
+                  {item.sub && <div style={{ fontSize: 10, fontWeight: 600, color: '#B0B8C1', marginTop: 2 }}>{item.sub}</div>}
+                </div>
+              ))}
+            </div>
+
+            {/* ── Day-by-Day Timeline ── */}
             {sortedDates.map((dateStr) => {
               const dayLabel = getDayNumber(dateStr);
               const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
-              
+
               return (
-                <div key={dateStr} className="print-card border border-[#E5E8EB] rounded-3xl p-6 bg-white shadow-sm space-y-5">
-                  {/* Day Date Title */}
-                  <div className="flex items-center gap-3 border-b border-[#F2F4F6] pb-3.5">
+                <div key={dateStr} style={{ border: '1px solid #E8ECF0', borderRadius: 20, padding: '28px 28px 20px', marginBottom: 28, backgroundColor: '#fff', pageBreakInside: 'avoid' }}>
+                  {/* Day Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #F2F4F6', paddingBottom: 16, marginBottom: 20 }}>
                     {dayLabel && (
-                      <span className="text-[10px] font-extrabold bg-[#0064FF] text-white px-2.5 py-1 rounded-lg">
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #0064FF, #3B82F6)', padding: '4px 12px', borderRadius: 8, letterSpacing: 0.5 }}>
                         {dayLabel}
                       </span>
                     )}
-                    <h2 className="text-[16px] font-extrabold text-[#191F28]">
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#191F28' }}>
                       {formatDateLabel(dateStr)}
-                    </h2>
-                    <span className="text-[11px] text-[#8B95A1] font-bold ml-auto">
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#8B95A1', marginLeft: 'auto' }}>
                       일정 {daySchedules.length}개
                     </span>
                   </div>
-                  
-                  {/* Schedules in this Day */}
-                  <div className="space-y-6">
-                    {daySchedules.map((schedule, idx) => {
-                      const sortedPls = [...(schedule.places || [])].sort((a, b) => {
-                        const dateA = a.date || schedule.date;
-                        const dateB = b.date || schedule.date;
-                        if (dateA !== dateB) return dateA.localeCompare(dateB);
-                        if (!a.time && !b.time) return 0;
-                        if (!a.time) return 1;
-                        if (!b.time) return -1;
-                        return a.time.localeCompare(b.time);
-                      });
 
-                      return (
-                        <div key={schedule.id} className="relative pl-6 border-l-2 border-[#E5E8EB] last:border-l-transparent pb-6 last:pb-1">
-                          {/* Timeline dot */}
-                          <div className="absolute left-[-6px] top-[6px] w-2.5 h-2.5 rounded-full bg-[#0064FF] border-2 border-white ring-2 ring-[#0064FF]/10" />
-                          
-                          <div className="flex items-start justify-between flex-wrap gap-2.5">
-                            <div>
-                              <h3 className="text-[15px] font-extrabold text-[#191F28] flex items-center gap-2">
-                                {schedule.title}
-                                {schedule.completed && (
-                                  <span className="text-[9px] bg-[#E8F0FE] text-[#0064FF] font-extrabold px-1.5 py-0.5 rounded-md">
-                                    방문 완료
-                                  </span>
-                                )}
-                              </h3>
-                              {schedule.memo && (
-                                <p className="text-[12.5px] text-[#4E5968] mt-2 whitespace-pre-wrap leading-relaxed bg-[#F8F9FA] border border-[#E5E8EB]/50 p-3.5 rounded-2xl">
-                                  {schedule.memo}
-                                </p>
+                  {/* Schedule items with timeline */}
+                  {daySchedules.map((schedule, idx) => {
+                    const sortedPls = [...(schedule.places || [])].sort((a, b) => {
+                      const dateA = a.date || schedule.date;
+                      const dateB = b.date || schedule.date;
+                      if (dateA !== dateB) return dateA.localeCompare(dateB);
+                      if (!a.time && !b.time) return 0;
+                      if (!a.time) return 1;
+                      if (!b.time) return -1;
+                      return a.time.localeCompare(b.time);
+                    });
+                    const isLast = idx === daySchedules.length - 1;
+
+                    return (
+                      <div key={schedule.id} style={{ position: 'relative', paddingLeft: 28, paddingBottom: isLast ? 4 : 28, borderLeft: isLast ? '2px solid transparent' : '2px solid #E8ECF0', marginLeft: 6 }}>
+                        {/* Timeline dot */}
+                        <div style={{ position: 'absolute', left: -7, top: 5, width: 12, height: 12, borderRadius: '50%', background: '#0064FF', border: '3px solid #fff', boxShadow: '0 0 0 3px rgba(0,100,255,0.12)' }} />
+
+                        {/* Schedule title row */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 15, fontWeight: 800, color: '#191F28' }}>{schedule.title}</span>
+                              {schedule.completed && (
+                                <span style={{ fontSize: 9, fontWeight: 800, color: '#0064FF', backgroundColor: '#E8F0FE', padding: '2px 8px', borderRadius: 6 }}>방문 완료</span>
                               )}
                             </div>
-                            
-                            {schedule.time && (
-                              <span className="text-[10px] font-bold text-[#0064FF] bg-[#E8F0FE] px-2.5 py-0.8 rounded-lg font-mono shrink-0">
-                                {schedule.time}
-                              </span>
-                            )}
                           </div>
-                          
-                          {/* Places checklist inside this schedule */}
-                          {sortedPls.length > 0 && (
-                            <div className="mt-4 bg-white border border-[#E5E8EB] rounded-2xl p-4.5 space-y-3.5 shadow-sm">
-                              <p className="text-[10px] font-bold text-[#8B95A1] uppercase tracking-wider border-b border-[#F2F4F6] pb-2">세부 일정 ({sortedPls.length})</p>
-                              <div className="space-y-3">
-                                {sortedPls.map((pl) => (
-                                  <div key={pl.id} className="text-xs flex items-start gap-3 border-b border-[#F9FAFB]/50 last:border-0 pb-3 last:pb-0">
-                                    <div className="mt-0.5 shrink-0">
-                                      {pl.completed ? (
-                                        <div className="w-[16px] h-[16px] rounded-full bg-[#0064FF] flex items-center justify-center text-white text-[9px] font-bold">
-                                          ✓
-                                        </div>
-                                      ) : (
-                                        <div className="w-[16px] h-[16px] rounded-full border-2 border-[#D1D6DB] bg-white" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className={`text-[12.5px] font-bold ${pl.completed ? 'line-through text-[#B0B8C1]' : 'text-[#191F28]'}`}>
-                                          {pl.name}
-                                        </span>
-                                        {pl.time && (
-                                          <span className="text-[9px] text-[#0064FF] bg-[#E8F0FE] px-1.5 py-0.2 rounded font-semibold font-mono">
-                                            {pl.time}
-                                          </span>
-                                        )}
-                                      </div>
-                                      {pl.memo && (
-                                        <p className="text-[11.5px] text-[#4E5968] mt-1 whitespace-pre-wrap leading-relaxed">
-                                          {pl.memo}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
+                          {schedule.time && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#0064FF', backgroundColor: '#E8F0FE', padding: '4px 10px', borderRadius: 8, fontFamily: "'SF Mono', 'Fira Code', monospace", whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              {schedule.time}
+                            </span>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        {/* Memo */}
+                        {schedule.memo && (
+                          <div style={{ fontSize: 12, color: '#4E5968', marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.8, backgroundColor: '#F8F9FB', border: '1px solid #EEF1F4', padding: '14px 16px', borderRadius: 14 }}>
+                            {schedule.memo}
+                          </div>
+                        )}
+
+                        {/* Sub-places */}
+                        {sortedPls.length > 0 && (
+                          <div style={{ marginTop: 14, border: '1px solid #EEF1F4', borderRadius: 16, overflow: 'hidden', backgroundColor: '#FAFBFC' }}>
+                            {/* Sub header */}
+                            <div style={{ fontSize: 10, fontWeight: 700, color: '#8B95A1', padding: '10px 16px', borderBottom: '1px solid #F2F4F6', letterSpacing: 1, textTransform: 'uppercase' }}>
+                              세부 방문지 ({sortedPls.length})
+                            </div>
+                            {/* Place rows */}
+                            {sortedPls.map((pl, pIdx) => (
+                              <div key={pl.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: pIdx < sortedPls.length - 1 ? '1px solid #F2F4F6' : 'none', backgroundColor: pl.completed ? '#FBFCFD' : '#fff' }}>
+                                {/* Checkbox */}
+                                <div style={{ marginTop: 2, flexShrink: 0 }}>
+                                  {pl.completed ? (
+                                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg, #0064FF, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,100,255,0.2)' }}>
+                                      <span style={{ color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1 }}>✓</span>
+                                    </div>
+                                  ) : (
+                                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid #D1D6DB', backgroundColor: '#fff' }} />
+                                  )}
+                                </div>
+                                {/* Place detail */}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: pl.completed ? '#B0B8C1' : '#191F28', textDecoration: pl.completed ? 'line-through' : 'none' }}>
+                                      {pl.name}
+                                    </span>
+                                    {pl.time && (
+                                      <span style={{ fontSize: 9, fontWeight: 700, color: '#0064FF', backgroundColor: '#E8F0FE', padding: '1px 7px', borderRadius: 4, fontFamily: "'SF Mono', 'Fira Code', monospace" }}>
+                                        {pl.time}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {pl.memo && (
+                                    <p style={{ fontSize: 11, color: '#6B7684', marginTop: 4, whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+                                      {pl.memo}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
+
+            {/* ── Footer ── */}
+            <div style={{ textAlign: 'center', paddingTop: 24, borderTop: '1px solid #F2F4F6', marginTop: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#B0B8C1', letterSpacing: 0.3 }}>TripSync · 유럽 여행을 동기화하다</div>
+              <div style={{ fontSize: 10, color: '#D1D6DB', marginTop: 4 }}>이 문서는 TripSync 앱에서 자동 생성되었습니다</div>
+            </div>
           </div>
         </div>,
         document.body
