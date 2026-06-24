@@ -600,7 +600,7 @@ export default function PlannerPage({
 
       {/* PDF Export Portal */}
       {createPortal(
-        <div id="print-itinerary-area" style={{ display: 'none' }} className="bg-white text-[#191F28] p-8 max-w-4xl mx-auto font-sans leading-relaxed">
+        <div id="print-itinerary-area" style={{ display: 'none' }} className="bg-white text-[#191F28] p-10 max-w-4xl mx-auto font-sans leading-relaxed">
           <style>{`
             .print-card {
               page-break-inside: avoid;
@@ -611,31 +611,51 @@ export default function PlannerPage({
             }
           `}</style>
           
-          {/* Header Banner */}
-          <div className="border-b-4 border-toss-blue pb-6 mb-8 flex justify-between items-end">
-            <div>
-              <h1 className="text-3xl font-extrabold text-toss-blue tracking-tight">✈️ TripSync 여행 일정표</h1>
-              <p className="text-sm text-toss-text-secondary mt-1.5">팀원들과 함께 계획한 유럽 여행 일정의 상세 내역입니다.</p>
+          {/* Toss Cover Card */}
+          <div className="bg-[#F8F9FA] border border-[#E5E8EB] rounded-3xl p-8 mb-8 relative overflow-hidden">
+            <div className="absolute right-[-40px] top-[-40px] w-56 h-56 rounded-full bg-[#0064FF]/5 pointer-events-none" />
+            
+            <div className="flex items-center gap-3.5 mb-5 relative z-10">
+              <div className="w-12 h-12 bg-[#0064FF] rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-[#0064FF]/10">
+                ✈️
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-[#0064FF] uppercase tracking-wider block">Travel Itinerary</span>
+                <h1 className="text-2xl font-extrabold text-[#191F28] tracking-tight mt-0.5">TripSync 유럽 여행 일정표</h1>
+              </div>
             </div>
-            <div className="text-right text-xs text-toss-text-secondary font-medium leading-5">
-              <p>출력 회원: <span className="font-semibold text-toss-text-primary">{nickname}</span></p>
-              <p>다운로드 일시: {new Date().toLocaleString('ko-KR')}</p>
+            
+            <p className="text-[13.5px] text-[#4E5968] leading-relaxed mb-6 relative z-10">
+              팀원들과 함께 실시간으로 동기화하여 작성한 소중한 여행 일정표입니다. 시간별 동선과 세부 장소 정보를 담고 있습니다. 즐겁고 안전한 여행이 되기를 바랍니다.
+            </p>
+            
+            <div className="flex justify-between items-center border-t border-[#E5E8EB] pt-5 text-[12px] text-[#8B95A1] relative z-10">
+              <div>
+                <span>출력 회원: </span>
+                <span className="font-semibold text-[#4E5968]">{nickname}</span>
+              </div>
+              <div>
+                <span>다운로드 일시: </span>
+                <span className="font-semibold text-[#4E5968]">
+                  {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })} {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
           </div>
           
           {/* Quick Summary Grid */}
-          <div className="grid grid-cols-3 gap-4 p-5 bg-toss-bg/50 rounded-2xl border border-toss-border/60 mb-8 text-center text-sm">
-            <div>
-              <p className="text-toss-text-secondary font-semibold mb-1">총 일정 일수</p>
-              <p className="text-xl font-extrabold text-toss-text-primary">{sortedDates.filter(d => d !== '날짜 미정').length}일</p>
+          <div className="grid grid-cols-3 gap-6 p-6 bg-white border border-[#E5E8EB] rounded-3xl mb-8 text-center shadow-sm">
+            <div className="border-r border-[#E5E8EB]/80 last:border-r-0">
+              <p className="text-[12px] font-bold text-[#8B95A1] mb-1.5">총 일정</p>
+              <p className="text-xl font-extrabold text-[#191F28]">{sortedDates.filter(d => d !== '날짜 미정').length}일</p>
+            </div>
+            <div className="border-r border-[#E5E8EB]/80 last:border-r-0">
+              <p className="text-[12px] font-bold text-[#8B95A1] mb-1.5">등록 일정</p>
+              <p className="text-xl font-extrabold text-[#191F28]">{schedules.length}개</p>
             </div>
             <div>
-              <p className="text-toss-text-secondary font-semibold mb-1">등록 일정 개수</p>
-              <p className="text-xl font-extrabold text-toss-text-primary">{schedules.length}개</p>
-            </div>
-            <div>
-              <p className="text-toss-text-secondary font-semibold mb-1">총 방문 예정지</p>
-              <p className="text-xl font-extrabold text-toss-text-primary">{totalP}곳 ({doneP}곳 완료)</p>
+              <p className="text-[12px] font-bold text-[#8B95A1] mb-1.5">총 방문지</p>
+              <p className="text-xl font-extrabold text-[#0064FF]">{totalP}곳 <span className="text-[12px] font-semibold text-[#8B95A1]">({doneP} 완료)</span></p>
             </div>
           </div>
 
@@ -646,18 +666,18 @@ export default function PlannerPage({
               const daySchedules = groupedSchedules[dateStr].sort((a, b) => a.createdAt - b.createdAt);
               
               return (
-                <div key={dateStr} className="print-card border border-toss-border/70 rounded-2xl p-6 bg-white shadow-sm space-y-4">
+                <div key={dateStr} className="print-card border border-[#E5E8EB] rounded-3xl p-6 bg-white shadow-sm space-y-5">
                   {/* Day Date Title */}
-                  <div className="flex items-center gap-3 border-b border-toss-border pb-3">
+                  <div className="flex items-center gap-3 border-b border-[#F2F4F6] pb-3.5">
                     {dayLabel && (
-                      <span className="text-xs font-extrabold bg-toss-blue text-white px-2.5 py-1 rounded-lg">
+                      <span className="text-[10px] font-extrabold bg-[#0064FF] text-white px-2.5 py-1 rounded-lg">
                         {dayLabel}
                       </span>
                     )}
-                    <h2 className="text-lg font-bold text-toss-text-primary">
+                    <h2 className="text-[16px] font-extrabold text-[#191F28]">
                       {formatDateLabel(dateStr)}
                     </h2>
-                    <span className="text-xs text-toss-text-secondary font-bold ml-auto">
+                    <span className="text-[11px] text-[#8B95A1] font-bold ml-auto">
                       일정 {daySchedules.length}개
                     </span>
                   </div>
@@ -676,60 +696,70 @@ export default function PlannerPage({
                       });
 
                       return (
-                        <div key={schedule.id} className="relative pl-6 border-l-2 border-toss-blue/15 last:border-l-0 pb-1">
+                        <div key={schedule.id} className="relative pl-6 border-l-2 border-[#E5E8EB] last:border-l-transparent pb-6 last:pb-1">
                           {/* Timeline dot */}
-                          <div className="absolute left-[-6px] top-[6px] w-2.5 h-2.5 rounded-full bg-toss-blue border-2 border-white" />
+                          <div className="absolute left-[-6px] top-[6px] w-2.5 h-2.5 rounded-full bg-[#0064FF] border-2 border-white ring-2 ring-[#0064FF]/10" />
                           
-                          <div className="flex items-baseline justify-between flex-wrap gap-2">
-                            <h3 className="text-base font-bold text-toss-text-primary flex items-center gap-2">
-                              {schedule.title}
-                              {schedule.completed && (
-                                <span className="text-[10px] bg-green-50 text-toss-success font-extrabold px-1.5 py-0.5 rounded">
-                                  완료
-                                </span>
+                          <div className="flex items-start justify-between flex-wrap gap-2.5">
+                            <div>
+                              <h3 className="text-[15px] font-extrabold text-[#191F28] flex items-center gap-2">
+                                {schedule.title}
+                                {schedule.completed && (
+                                  <span className="text-[9px] bg-[#E8F0FE] text-[#0064FF] font-extrabold px-1.5 py-0.5 rounded-md">
+                                    방문 완료
+                                  </span>
+                                )}
+                              </h3>
+                              {schedule.memo && (
+                                <p className="text-[12.5px] text-[#4E5968] mt-2 whitespace-pre-wrap leading-relaxed bg-[#F8F9FA] border border-[#E5E8EB]/50 p-3.5 rounded-2xl">
+                                  {schedule.memo}
+                                </p>
                               )}
-                            </h3>
+                            </div>
+                            
                             {schedule.time && (
-                              <span className="text-xs font-semibold text-toss-blue font-mono bg-toss-blue-light px-2.5 py-0.5 rounded">
+                              <span className="text-[10px] font-bold text-[#0064FF] bg-[#E8F0FE] px-2.5 py-0.8 rounded-lg font-mono shrink-0">
                                 {schedule.time}
                               </span>
                             )}
                           </div>
                           
-                          {schedule.memo && (
-                            <p className="text-xs text-toss-text-secondary mt-1.5 whitespace-pre-wrap leading-relaxed">
-                              {schedule.memo}
-                            </p>
-                          )}
-                          
                           {/* Places checklist inside this schedule */}
                           {sortedPls.length > 0 && (
-                            <div className="mt-3.5 bg-toss-bg/30 border border-toss-border/40 rounded-xl p-4 space-y-2.5">
-                              <p className="text-[11px] font-bold text-toss-text-secondary uppercase tracking-wider">세부 방문지 ({sortedPls.length})</p>
-                              {sortedPls.map((pl) => (
-                                <div key={pl.id} className="text-xs flex items-start gap-2.5 border-b border-toss-border/20 last:border-0 pb-2.5 last:pb-0">
-                                  <span className="text-xs font-semibold text-toss-blue mt-0.5">
-                                    {pl.completed ? '☑' : '☐'}
-                                  </span>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className={`font-bold ${pl.completed ? 'line-through text-toss-text-tertiary' : 'text-toss-text-primary'}`}>
-                                        {pl.name}
-                                      </span>
-                                      {pl.time && (
-                                        <span className="text-[9.5px] text-toss-blue font-semibold font-mono bg-toss-blue-light/60 px-1.5 py-0.2 rounded">
-                                          {pl.time}
-                                        </span>
+                            <div className="mt-4 bg-white border border-[#E5E8EB] rounded-2xl p-4.5 space-y-3.5 shadow-sm">
+                              <p className="text-[10px] font-bold text-[#8B95A1] uppercase tracking-wider border-b border-[#F2F4F6] pb-2">세부 일정 ({sortedPls.length})</p>
+                              <div className="space-y-3">
+                                {sortedPls.map((pl) => (
+                                  <div key={pl.id} className="text-xs flex items-start gap-3 border-b border-[#F9FAFB]/50 last:border-0 pb-3 last:pb-0">
+                                    <div className="mt-0.5 shrink-0">
+                                      {pl.completed ? (
+                                        <div className="w-[16px] h-[16px] rounded-full bg-[#0064FF] flex items-center justify-center text-white text-[9px] font-bold">
+                                          ✓
+                                        </div>
+                                      ) : (
+                                        <div className="w-[16px] h-[16px] rounded-full border-2 border-[#D1D6DB] bg-white" />
                                       )}
                                     </div>
-                                    {pl.memo && (
-                                      <p className="text-[11px] text-toss-text-secondary mt-0.5 whitespace-pre-wrap leading-relaxed">
-                                        {pl.memo}
-                                      </p>
-                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`text-[12.5px] font-bold ${pl.completed ? 'line-through text-[#B0B8C1]' : 'text-[#191F28]'}`}>
+                                          {pl.name}
+                                        </span>
+                                        {pl.time && (
+                                          <span className="text-[9px] text-[#0064FF] bg-[#E8F0FE] px-1.5 py-0.2 rounded font-semibold font-mono">
+                                            {pl.time}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {pl.memo && (
+                                        <p className="text-[11.5px] text-[#4E5968] mt-1 whitespace-pre-wrap leading-relaxed">
+                                          {pl.memo}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
